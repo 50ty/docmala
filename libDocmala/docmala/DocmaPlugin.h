@@ -18,7 +18,7 @@ namespace docmala {
 
         virtual ~DocumentPlugin();
         virtual BlockProcessing blockProcessing() const { return BlockProcessing::No; }
-        virtual bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block = "" ) = 0;
+        virtual bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block = "" ) = 0;
     };
     DocumentPlugin::~DocumentPlugin() {}
 

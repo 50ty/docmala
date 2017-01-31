@@ -11,7 +11,7 @@ class PlantUMLPlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block) override;
+    bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block) override;
 };
 
 
@@ -19,25 +19,8 @@ DocumentPlugin::BlockProcessing PlantUMLPlugin::blockProcessing() const {
     return BlockProcessing::Required;
 }
 
-bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block)
+bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block)
 {
-//    std::string tempFileName = std::tmpnam(nullptr);
-
-//    std::ofstream outFile;
-
-//    outFile.open(tempFileName);
-
-//    outFile << "@startuml" << std::endl;
-//    outFile << block << std::endl;
-//    outFile << "@enduml" << std::endl;
-
-//    outFile.flush();
-
-//    std::string command = "java -jar plantuml.jar ";
-//    command += tempFileName;
-
-//    system( command.data() );
-
     std::stringstream outputFileName;
 
     auto outPathIter = parameters.find("outputDir");
@@ -103,7 +86,7 @@ bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocatio
     waitpid(pid,&exit_code,0);
     posix_spawn_file_actions_destroy(&action);
 
-    outDocument.push_back( DocumentPart::newImage("png", imageData) );
+    document.push_back( DocumentPart::newImage("png", imageData) );
     return true;
 }
 

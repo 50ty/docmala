@@ -64,6 +64,18 @@ bool Docmala::produceOutput(const std::string &pluginName)
     return true;
 }
 
+std::vector<std::string> Docmala::listOutputPlugins() const
+{
+    auto plugins = _pluginLoader.extensions<OutputPlugin>();
+    std::vector<std::string> knownOutputPlugins;
+
+    for( auto plugin: plugins ) {
+        knownOutputPlugins.push_back(plugin.name() + "  -  " + plugin.description());
+    }
+
+    return knownOutputPlugins;
+}
+
 bool Docmala::readHeadLine()
 {
     DocumentPart::Headline headline;
@@ -167,9 +179,7 @@ bool Docmala::readPlugin()
             if( !readBlock(block) ) {
                 return false;
             } else {
-                std::vector<DocumentPart> documentParts;
-                plugin->process(parameters, nameBegin, documentParts, block);
-                _document.insert(_document.end(), documentParts.begin(), documentParts.end());
+                plugin->process(parameters, nameBegin, _document, block);
             }
         }
     }

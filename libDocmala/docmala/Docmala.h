@@ -25,6 +25,8 @@ namespace docmala {
 
         bool produceOutput( const std::string &pluginName );
 
+        std::vector<std::string> listOutputPlugins() const;
+
         std::vector< Error > errors() const {
             return _errors;
         }
