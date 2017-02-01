@@ -33,6 +33,7 @@ bool HtmlOutput::write(const ParameterList &parameters, const std::vector<Docume
     outFile.open(outputFileName);
 
     unsigned int imageCounter = 1;
+    unsigned int figureCounter = 1;
 
     if( outFile.is_open() ) {
         outFile << "<!doctype html>" << std::endl;
@@ -46,6 +47,7 @@ bool HtmlOutput::write(const ParameterList &parameters, const std::vector<Docume
         outFile << "" << std::endl;
 
         bool paragraphOpen = false;
+        DocumentPart previous;
 
         for( const auto &part : document ) {
             switch(part.type() ) {
@@ -89,11 +91,20 @@ bool HtmlOutput::write(const ParameterList &parameters, const std::vector<Docume
                 imgFile << image->data;
                 imgFile.close();
 
+                outFile << "<figure>" << std::endl;
                 outFile << "<img src=\"" << fileName.str() <<"\" alt=\""<< image->text <<"\">" << std::endl;
+                if( previous.type() == DocumentPart::Type::Caption ) {
+                    outFile << "<figcaption>Figure " << figureCounter << ": " << previous.caption()->text << "</figcaption>" << std::endl;
+                    figureCounter++;
+                }
+                outFile << "</figure>" << std::endl;
                 imageCounter++;
                 break;
             }
+            default:
+                break;
             }
+            previous = part;
         }
 
         if( paragraphOpen ) {

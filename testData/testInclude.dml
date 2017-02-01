@@ -1,7 +1,5 @@
-= Headline level 1 ...
-     blubb
+= Include Test
 
-.Diagramm mit schönem Bildchen
 [plantuml]
 ----
 User << Human >>
@@ -9,13 +7,12 @@ User << Human >>
 (Start) << One Shot >>
 (Use the application) as (Use) << Main >>
 
-User -> (Start)
 User -> (Use)
 
 MySql -> (Use)
 ----
      
-Hallo Ana, hier ist text :)     
+Hallo Ana, hier ist eingefügter text :)
 
 [plantuml]
 ----
@@ -29,7 +26,5 @@ Volleyball -> Ballsport
 
 Text text text :)
 mehr text :)
-
-[include, file="testInclude.dml", keepHeadlineLevel]
 
 Text text text

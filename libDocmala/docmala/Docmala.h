@@ -9,16 +9,12 @@
 
 #include "Parameter.h"
 #include "DocumentPart.h"
+#include "Error.h"
 
 namespace docmala {
 
     class Docmala {
     public:
-        struct Error {
-            FileLocation location;
-            std::string message;
-        };
-
         Docmala();
 
         bool parseFile( const std::string &fileName, const std::string &outputDir );
@@ -27,13 +23,19 @@ namespace docmala {
 
         std::vector<std::string> listOutputPlugins() const;
 
-        std::vector< Error > errors() const {
+        std::vector<Error> errors() const {
             return _errors;
+        }
+
+        const std::vector<DocumentPart>& document() const {
+            return _document;
         }
 
     private:
 
         bool readHeadLine();
+        bool readCaption();
+        bool readLine(std::string &destination);
         bool readPlugin();
         bool readText(char startCharacter);
         bool readParameterList(ParameterList &parameters, char blockEnd);
@@ -111,7 +113,7 @@ namespace docmala {
          */
         std::vector<DocumentPart> _document;
         File _file;
-        std::vector< Error > _errors;
+        std::vector<Error> _errors;
         extension_system::ExtensionSystem _pluginLoader;
         std::string _outputDir;
     };

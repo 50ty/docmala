@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 
 project(docmala)
 
-find_package(Boost)
+find_package(Boost COMPONENTS program_options REQUIRED)
 
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -18,4 +18,4 @@ add_subdirectory(plugins)
 
 
 add_executable(docmala "main.cpp")
-target_link_libraries(docmala extension_system libDocmala)
+target_link_libraries(docmala extension_system libDocmala ${Boost_LIBRARIES})

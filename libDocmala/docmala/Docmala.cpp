@@ -10,7 +10,7 @@ Docmala::Docmala()
     _pluginLoader.searchDirectory("./", false);
 }
 
-bool Docmala::parseFile(const std::string &fileName, const std::__cxx11::string &outputDir)
+bool Docmala::parseFile(const std::string &fileName, const std::string &outputDir)
 {
     _file = File(fileName);
     _outputDir = outputDir;
@@ -36,6 +36,9 @@ bool Docmala::parseFile(const std::string &fileName, const std::__cxx11::string 
                 continue;
             case '=':
                 readHeadLine();
+                break;
+            case '.':
+                readCaption();
                 break;
             case '[':
                 readPlugin();
@@ -81,26 +84,19 @@ bool Docmala::readHeadLine()
     DocumentPart::Headline headline;
     headline.level = 1;
 
-    enum class Mode {
-        Level,
-        Text
-    } mode { Mode::Level };
-
     while( !_file.isEoF() ) {
         char c = _file.getch();
         if( c == '\n' ) {
-            break;
+            _errors.push_back(Error{_file.location(), std::string("Headline contains no text and is skipped.") });
+            return false;
         }
 
-        if( mode == Mode::Level ) {
-            if( c == '=' ) {
-                headline.level++;
-            } else {
-                mode = Mode::Text;
-            }
-        }
-        if( mode == Mode::Text ) {
+        if( c == '=' ) {
+            headline.level++;
+        } else {
             headline.text.push_back(c);
+            readLine(headline.text);
+            break;
         }
     }
 
@@ -109,11 +105,32 @@ bool Docmala::readHeadLine()
 
 }
 
+bool Docmala::readCaption()
+{
+    std::string caption;
+    if( !readLine(caption) )
+        return false;
+    _document.push_back(DocumentPart::newCaption(caption));
+    return true;
+}
+
+bool Docmala::readLine(std::string &destination)
+{
+    while( !_file.isEoF() ) {
+        char c = _file.getch();
+        if( c == '\n' ) {
+            break;
+        }
+        destination.push_back(c);
+    }
+    return true;
+}
+
 bool Docmala::readPlugin()
 {
     enum class Mode {
         Begin,
-        Name,
+        ParameterName,
         SkipUntilNewLine
     } mode { Mode::Begin };
 
@@ -121,6 +138,7 @@ bool Docmala::readPlugin()
     std::string name;
     ParameterList parameters;
     parameters.insert(std::make_pair("outputDir", Parameter { "outputDir", _outputDir, FileLocation() }));
+    parameters.insert(std::make_pair("inputFile", Parameter{"inputFile", _file.fileName(), FileLocation()} ) );
 
     bool skipWarningPrinted = false;
 
@@ -132,11 +150,11 @@ bool Docmala::readPlugin()
             if( c == ' ' || c == '\t' ) {
                 continue;
             } else {
-                mode = Mode::Name;
+                mode = Mode::ParameterName;
                 nameBegin = _file.location();
             }
         }
-        if( mode == Mode::Name ) {
+        if( mode == Mode::ParameterName ) {
             if( c == ',' ) {
                 if( !readParameterList(parameters, ']' ) ) {
                     return false;
@@ -181,6 +199,8 @@ bool Docmala::readPlugin()
             } else {
                 plugin->process(parameters, nameBegin, _document, block);
             }
+        } else {
+            plugin->process(parameters, nameBegin, _document, "");
         }
     }
 
@@ -212,12 +232,11 @@ bool Docmala::readText(char startCharacter)
 bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
 {
     enum class Mode {
-        Name,
         ParameterName,
         EndOrEquals,
         ParameterValue,
         EndOrNext
-    } mode { Mode::Name };
+    } mode { Mode::ParameterName };
 
     enum class ValueMode {
         Normal,
@@ -232,7 +251,7 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
             _errors.push_back(Error{_file.location(), std::string("Error while parsing parameters. A valid parameter definition was expected but a 'newline' was found.") });
             return false;
         }
-        if( mode == Mode::Name ) {
+        if( mode == Mode::ParameterName ) {
             if( c == ' ' || c == '\t' )  {
                 if( parameter.key.empty() ) { // skip leading white spaces
                     continue;
@@ -260,7 +279,7 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
                 } else {
                     parameters.insert( std::make_pair(parameter.key, parameter) );
                     parameter = Parameter();
-                    mode=Mode::Name;
+                    mode=Mode::ParameterName;
                     continue;
                 }
             } else if ( c == blockEnd ) {
@@ -290,10 +309,26 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
                 _errors.push_back(Error{_file.location(), std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c +"' was found." });
                 return false;
             }
+        } else if( mode == Mode::EndOrNext ) {
+            if( c == ' ' || c == '\t' )  {
+                continue;
+            } else if( c == ',' ) {
+                mode = Mode::ParameterName;
+                parameters.insert( std::make_pair(parameter.key, parameter) );
+                parameter = Parameter();
+                continue;
+            } else if( c == blockEnd ) {
+                parameters.insert( std::make_pair(parameter.key, parameter) );
+                parameter = Parameter();
+                return true;
+            } else {
+                _errors.push_back(Error{_file.location(), std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c +"' was found." });
+                return false;
+            }
         } else if( mode == Mode::ParameterValue ) {
             if( parameter.value.empty() && (c == ' ' || c == '\t') )  {
                 continue;
-            } else if( parameter.value.empty() ) {
+            } else if( parameter.value.empty() && valueMode == ValueMode::Normal ) {
                 if( c == '"' ) {
                     valueMode = ValueMode::Extended;
                     continue;
@@ -328,7 +363,7 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
                     }
                 } else if( valueMode == ValueMode::Normal ) {
                     if( c == ' ' || c == '\t' || c == ',' || c == blockEnd )  {
-                        mode = Mode::Name;
+                        mode = Mode::ParameterName;
                         parameters.insert( std::make_pair(parameter.key, parameter) );
                         parameter = Parameter();
                         if( c == blockEnd ) {
