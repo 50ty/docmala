@@ -220,7 +220,7 @@ bool Docmala::readText(char startCharacter)
     while( true ) {
         if( isFormatSpecifier(c) ) {
             if((isWhitespace(_file.previous()) || isFormatSpecifier(_file.previous()))
-                && !isWhitespace(_file.next()) ) {
+                && !isWhitespace(_file.following()) ) {
                 if( !text.text.empty() ) {
                     _document.push_back(DocumentPart{text} );
                     text.text.clear();
@@ -237,7 +237,7 @@ bool Docmala::readText(char startCharacter)
                     break;
                 }
             } else if( (!isWhitespace(_file.previous()) )
-                && ( isWhitespace(_file.next()) || isFormatSpecifier(_file.next()))) {
+                && ( isWhitespace(_file.following()) || isFormatSpecifier(_file.following()))) {
                 if( !text.text.empty() ) {
                     _document.push_back(DocumentPart{text} );
                     text.text.clear();

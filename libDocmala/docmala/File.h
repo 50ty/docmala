@@ -27,7 +27,7 @@ namespace docmala {
         char getch();
 
         char previous();
-        char next();
+        char following();
 
         FileLocation location() const;
 

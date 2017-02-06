@@ -45,7 +45,7 @@ char File::previous()
     return _previous[0];
 }
 
-char File::next()
+char File::following()
 {
     auto pos = _fileIterator;
     auto line = _line;
