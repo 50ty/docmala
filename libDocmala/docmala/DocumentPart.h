@@ -25,15 +25,22 @@ public:
     };
 
     struct Text {
-        Text() = default;
+        Text() {}
+
         Text(const std::string& text)
             : text(text)
+            , bold(false)
+            , italic(false)
         { }
+
         std::string text;
+        bool bold = false;
+        bool italic = false;
+        bool crossedOut = false;
     };
 
     struct Headline : public Text {
-        Headline() = default;
+        Headline() {}
         Headline(const std::string& text, int level)
             : Text(text)
             , level(level)

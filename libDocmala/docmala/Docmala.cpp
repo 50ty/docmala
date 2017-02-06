@@ -207,25 +207,71 @@ bool Docmala::readPlugin()
     return true;
 }
 
+bool isFormatSpecifier(char c)
+{
+    return c == '_' || c == '*' || c == '-';
+}
+
 bool Docmala::readText(char startCharacter)
 {
-    std::string text;
-    text.push_back(startCharacter);
+    char c = startCharacter;
+    DocumentPart::Text text;
 
-    while( !_file.isEoF() ) {
-        char c = _file.getch();
-        if( c == '\n' ) {
-            if( !text.empty() )
-                _document.push_back(DocumentPart::newText(text) );
+    while( true ) {
+        if( isFormatSpecifier(c) ) {
+            if((isWhitespace(_file.previous()) || isFormatSpecifier(_file.previous()))
+                && !isWhitespace(_file.next()) ) {
+                if( !text.text.empty() ) {
+                    _document.push_back(DocumentPart{text} );
+                    text.text.clear();
+                }
+                switch(c) {
+                case '_':
+                    text.bold = true;
+                    break;
+                case '*':
+                    text.italic = true;
+                    break;
+                case '-':
+                    text.crossedOut = true;
+                    break;
+                }
+            } else if( (!isWhitespace(_file.previous()) )
+                && ( isWhitespace(_file.next()) || isFormatSpecifier(_file.next()))) {
+                if( !text.text.empty() ) {
+                    _document.push_back(DocumentPart{text} );
+                    text.text.clear();
+                }
+                switch(c) {
+                case '_':
+                    text.bold = false;
+                    break;
+                case '*':
+                    text.italic = false;
+                    break;
+                case '-':
+                    text.crossedOut = false;
+                    break;
+                }
+            }
+
+        } else if( c == '\n' ) {
+            if( !text.text.empty() )
+                _document.push_back(DocumentPart{text} );
             return true;
         } else {
-            text.push_back(c);
+            text.text.push_back(c);
         }
+
+        if( _file.isEoF() )
+            break;
+
+        c = _file.getch();
     }
 
     // end of file is no error, when parsing text
-    if( !text.empty() )
-        _document.push_back(DocumentPart::newText(text) );
+    if( !text.text.empty() )
+        _document.push_back(DocumentPart{text});
     return true;
 }
 
@@ -438,4 +484,9 @@ bool Docmala::readBlock(std::string &block)
     }
     _errors.push_back(Error{_file.location(), std::string("Error while parsing block. A valid block definition was expected but an 'end of file' was found.") });
     return false;
+}
+
+bool Docmala::isWhitespace(char c) const
+{
+    return c == ' ' || c == '\t' || c == '\n' || c == '\0';
 }

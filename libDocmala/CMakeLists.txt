@@ -5,6 +5,8 @@ add_library(libDocmala SHARED
                 "docmala/Docmala.h"
                 "docmala/Docmala.cpp"
                 "docmala/DocmaPlugin.h"
+                "docmala/File.h"
+                "docmala/File.cpp"
                 "docmala/FileLocation.h"
                 "docmala/Parameter.h"
                 "docmala/DocumentPart.h"

@@ -69,8 +69,26 @@ bool HtmlOutput::write(const ParameterList &parameters, const std::vector<Docume
             case DocumentPart::Type::Text: {
                 auto text = part.text();
 
+                if( text->bold ) {
+                    outFile << "<b>";
+                }
+                if( text->italic ) {
+                    outFile << "<i>";
+                }
+                if( text->crossedOut ) {
+                    outFile << "<del>";
+                }
                 outFile << text->text << std::endl;
 
+                if( text->bold ) {
+                    outFile << "</b>";
+                }
+                if( text->italic ) {
+                    outFile << "</i>";
+                }
+                if( text->crossedOut ) {
+                    outFile << "</del>";
+                }
                 break;
             }
             case DocumentPart::Type::Paragraph:
