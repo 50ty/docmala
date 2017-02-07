@@ -38,9 +38,10 @@ namespace docmala {
         bool readCaption();
         bool readLine(std::string &destination);
         bool readPlugin();
-        bool readText(char startCharacter);
+        bool readText(char startCharacter, DocumentPart::Text &text);
         bool readParameterList(ParameterList &parameters, char blockEnd);
         bool readBlock(std::string &block);
+        bool readList(DocumentPart::List::Type type);
 
         bool isWhitespace(char c) const;
 

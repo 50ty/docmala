@@ -26,25 +26,46 @@ bool Docmala::parseFile(const std::string &fileName, const std::string &outputDi
         if( mode == Mode::BeginOfLine ) {
             switch(c)
             {
-            case ' ':
-            case '\t':
-                continue;
-            case '\n':
-                if( _document.size() > 0 && _document.back().type() != DocumentPart::Type::Paragraph ) {
-                    _document.push_back(DocumentPart::newParagraph());
+                case ' ':
+                case '\t':
+                    continue;
+                case '\n':
+                    if( _document.size() > 0 && _document.back().type() != DocumentPart::Type::Paragraph ) {
+                        _document.push_back(DocumentPart(DocumentPart::Paragraph()));
+                    }
+                    continue;
+                case '=':
+                    readHeadLine();
+                    break;
+                case '.':
+                    readCaption();
+                    break;
+                case '[':
+                    readPlugin();
+                    break;
+                case '#':
+                    if( isWhitespace(_file.following() ) || _file.following() == '#'  ) {
+                        readList( DocumentPart::List::Type::Numbered );
+                    } else {
+                        DocumentPart::Text text;
+                        readText(c, text);
+                        _document.push_back(text);
+                    }
+                    break;
+                case '*':
+                    if( isWhitespace(_file.following() ) || _file.following() == '*' ) {
+                        readList( DocumentPart::List::Type::Points );
+                    } else {
+                        DocumentPart::Text text;
+                        readText(c, text);
+                        _document.push_back(text);
+                    }
+                    break;
+                default: {
+                    DocumentPart::Text text;
+                    readText(c, text);
+                    _document.push_back(text);
                 }
-                continue;
-            case '=':
-                readHeadLine();
-                break;
-            case '.':
-                readCaption();
-                break;
-            case '[':
-                readPlugin();
-                break;
-            default:
-                readText(c);
             }
         }
     }
@@ -81,9 +102,7 @@ std::vector<std::string> Docmala::listOutputPlugins() const
 
 bool Docmala::readHeadLine()
 {
-    DocumentPart::Headline headline;
-    headline.level = 1;
-
+    int level = 1;
     while( !_file.isEoF() ) {
         char c = _file.getch();
         if( c == '\n' ) {
@@ -92,25 +111,26 @@ bool Docmala::readHeadLine()
         }
 
         if( c == '=' ) {
-            headline.level++;
+            level++;
         } else {
-            headline.text.push_back(c);
-            readLine(headline.text);
-            break;
+            DocumentPart::Text text;
+            readText(c, text);
+            _document.push_back(DocumentPart::Headline(text, level));
+            return true;
         }
     }
 
-    _document.push_back(DocumentPart(headline));
-    return true;
+    _errors.push_back(Error{_file.location(), std::string("End of file reached while parsing headline.") });
+    return false;
 
 }
 
 bool Docmala::readCaption()
 {
-    std::string caption;
-    if( !readLine(caption) )
+    DocumentPart::Text text;
+    if( !readText('\0', text) )
         return false;
-    _document.push_back(DocumentPart::newCaption(caption));
+    _document.push_back(DocumentPart::Caption(text));
     return true;
 }
 
@@ -212,55 +232,59 @@ bool isFormatSpecifier(char c)
     return c == '_' || c == '*' || c == '-';
 }
 
-bool Docmala::readText(char startCharacter)
+bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
 {
     char c = startCharacter;
-    DocumentPart::Text text;
+    DocumentPart::FormatedText formatedText;
+
+    if( startCharacter == '\0' ) {
+        c = _file.getch();
+    }
 
     while( true ) {
         if( isFormatSpecifier(c) ) {
             if((isWhitespace(_file.previous()) || isFormatSpecifier(_file.previous()))
                 && !isWhitespace(_file.following()) ) {
-                if( !text.text.empty() ) {
-                    _document.push_back(DocumentPart{text} );
-                    text.text.clear();
+                if( !formatedText.text.empty() ) {
+                    text.text.push_back(formatedText);
+                    formatedText.text.clear();
                 }
                 switch(c) {
                 case '_':
-                    text.bold = true;
+                    formatedText.bold = true;
                     break;
                 case '*':
-                    text.italic = true;
+                    formatedText.italic = true;
                     break;
                 case '-':
-                    text.crossedOut = true;
+                    formatedText.crossedOut = true;
                     break;
                 }
             } else if( (!isWhitespace(_file.previous()) )
                 && ( isWhitespace(_file.following()) || isFormatSpecifier(_file.following()))) {
-                if( !text.text.empty() ) {
-                    _document.push_back(DocumentPart{text} );
-                    text.text.clear();
+                if( !formatedText.text.empty() ) {
+                    text.text.push_back(formatedText);
+                    formatedText.text.clear();
                 }
                 switch(c) {
                 case '_':
-                    text.bold = false;
+                    formatedText.bold = false;
                     break;
                 case '*':
-                    text.italic = false;
+                    formatedText.italic = false;
                     break;
                 case '-':
-                    text.crossedOut = false;
+                    formatedText.crossedOut = false;
                     break;
                 }
             }
 
         } else if( c == '\n' ) {
-            if( !text.text.empty() )
-                _document.push_back(DocumentPart{text} );
+            if( !formatedText.text.empty() )
+                text.text.push_back(formatedText);
             return true;
         } else {
-            text.text.push_back(c);
+            formatedText.text.push_back(c);
         }
 
         if( _file.isEoF() )
@@ -270,8 +294,8 @@ bool Docmala::readText(char startCharacter)
     }
 
     // end of file is no error, when parsing text
-    if( !text.text.empty() )
-        _document.push_back(DocumentPart{text});
+    if( !formatedText.text.empty() )
+        text.text.push_back(formatedText);
     return true;
 }
 
@@ -483,6 +507,36 @@ bool Docmala::readBlock(std::string &block)
         }
     }
     _errors.push_back(Error{_file.location(), std::string("Error while parsing block. A valid block definition was expected but an 'end of file' was found.") });
+    return false;
+}
+
+bool Docmala::readList(DocumentPart::List::Type type)
+{
+    int level = 1;
+
+    while( !_file.isEoF() ) {
+        char c = _file.getch();
+
+        if( (c == '*' && type == DocumentPart::List::Type::Points) ||
+            (c == '#' && type == DocumentPart::List::Type::Numbered) ) {
+            level++;
+        } else if( isWhitespace(c) ) {
+            DocumentPart::Text text;
+            readText('\0', text);
+
+            if( !_document.empty() && document().back().type() == DocumentPart::Type::List ) {
+                if( type == _document.back().list()->type && _document.back().list()->level == level ) {
+                    _document.back().list()->entries.push_back(text);
+                } else {
+                    _document.push_back(DocumentPart::List({text}, type, level));
+                }
+                return true;
+            } else {
+                _document.push_back(DocumentPart::List({text}, type, level));
+                return true;
+            }
+        }
+    }
     return false;
 }
 

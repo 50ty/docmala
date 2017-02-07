@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
 
@@ -16,7 +17,8 @@ public:
         Text,
         Paragraph,
         Image,
-        Caption
+        Caption,
+        List
     };
 
     struct KeyValuePair {
@@ -24,14 +26,12 @@ public:
         std::string value;
     };
 
-    struct Text {
-        Text() {}
+    struct Paragraph {
 
-        Text(const std::string& text)
-            : text(text)
-            , bold(false)
-            , italic(false)
-        { }
+    };
+
+    struct FormatedText {
+        FormatedText() {}
 
         std::string text;
         bool bold = false;
@@ -39,9 +39,15 @@ public:
         bool crossedOut = false;
     };
 
+    struct Text {
+        Text() {}
+
+        std::vector<FormatedText> text;
+    };
+
     struct Headline : public Text {
         Headline() {}
-        Headline(const std::string& text, int level)
+        Headline(const Text& text, int level)
             : Text(text)
             , level(level)
         {}
@@ -49,16 +55,36 @@ public:
         int level = 0;
     };
 
+    struct List : public Text {
+        enum class Type {
+            Points,
+            Dashes,
+            Numbered
+        };
+
+        List() { }
+        List(const std::vector<Text> &entries, Type type, int level )
+            : entries(entries)
+            , type(type)
+            , level(level)
+        {}
+
+
+        std::vector<Text> entries;
+        Type type = Type::Points;
+        int level = 0;
+    };
+
     struct Caption : public Text {
         Caption() = default;
-        Caption(const std::string& text)
+        Caption(const Text& text)
             : Text(text)
         {}
     };
 
     struct Image : public Text {
         Image() = default;
-        Image(const std::string& format, const std::string& data, const std::string& text)
+        Image(const std::string& format, const std::string& data, const Text& text)
             : Text(text)
             , format(format)
             , data(data)
@@ -68,6 +94,10 @@ public:
     };
 
     DocumentPart() = default;
+
+    DocumentPart( const Paragraph & )
+        : _type( Type::Paragraph )
+    { }
 
     DocumentPart( const Headline &headline )
         : _type( Type::Headline )
@@ -89,25 +119,10 @@ public:
         , _data( image )
     { }
 
-    static DocumentPart newParagraph() {
-        return DocumentPart(Type::Paragraph);
-    }
-
-    static DocumentPart newText(const std::string &text) {
-        return DocumentPart( Type::Text, Text {text});
-    }
-
-    static DocumentPart newCaption(const std::string &caption) {
-        return DocumentPart( Type::Caption, Caption {caption});
-    }
-
-    static DocumentPart newImage(const std::string &format, const std::string &data) {
-        return DocumentPart( Type::Image, Image {format, data, ""});
-    }
-
-    static DocumentPart newHeadline(const std::string &text, int level) {
-        return DocumentPart( Type::Text, Headline {text, level});
-    }
+    DocumentPart( const List &list )
+        : _type( Type::List )
+        , _data( list )
+    { }
 
     Type type() const { return _type; }
 
@@ -127,6 +142,14 @@ public:
         return boost::get<Caption>(&_data);
     }
 
+    const List* list() const {
+        return boost::get<List>(&_data);
+    }
+
+    List* list() {
+        return boost::get<List>(&_data);
+    }
+
 private:
     template< class T >
     DocumentPart(Type type, const T &data)
@@ -139,7 +162,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image> _data;
+    boost::variant<Text, Caption, Headline, Image, List> _data;
 };
 
 }

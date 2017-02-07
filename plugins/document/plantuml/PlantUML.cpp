@@ -86,7 +86,8 @@ bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocatio
     waitpid(pid,&exit_code,0);
     posix_spawn_file_actions_destroy(&action);
 
-    document.push_back( DocumentPart::newImage("png", imageData) );
+    DocumentPart::Text text;
+    document.push_back( DocumentPart::Image("png", imageData, text) );
     return true;
 }
 
