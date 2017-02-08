@@ -9,6 +9,7 @@
 
 #include "Parameter.h"
 #include "DocumentPart.h"
+#include "DocmaPlugin.h"
 #include "Error.h"
 #include "File.h"
 
@@ -55,5 +56,6 @@ namespace docmala {
         std::vector<Error> _errors;
         extension_system::ExtensionSystem _pluginLoader;
         std::string _outputDir;
+        std::map<std::string, std::shared_ptr<DocumentPlugin>> _loadedDocumentPlugins;
     };
 }

@@ -4,6 +4,7 @@
 #include <spawn.h>
 #include <sys/wait.h>
 #include <sstream>
+#include <unordered_map>
 
 using namespace docmala;
 
@@ -12,6 +13,8 @@ class PlantUMLPlugin : public DocumentPlugin {
 public:
     BlockProcessing blockProcessing() const override;
     bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block) override;
+
+    std::unordered_map<std::string, DocumentPart::Image> _cache;
 };
 
 
@@ -22,6 +25,13 @@ DocumentPlugin::BlockProcessing PlantUMLPlugin::blockProcessing() const {
 bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block)
 {
     std::stringstream outputFileName;
+
+    auto cachePosition = _cache.find(block);
+
+    if( cachePosition != _cache.end() ) {
+        document.push_back( cachePosition->second );
+        return true;
+    }
 
     auto outPathIter = parameters.find("outputDir");
     if( outPathIter != parameters.end() ) {
@@ -87,7 +97,9 @@ bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocatio
     posix_spawn_file_actions_destroy(&action);
 
     DocumentPart::Text text;
-    document.push_back( DocumentPart::Image("png", imageData, text) );
+    DocumentPart::Image image("png", imageData, text);
+    _cache.insert(std::make_pair(block, image));
+    document.push_back( image );
     return true;
 }
 

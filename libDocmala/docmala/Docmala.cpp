@@ -206,7 +206,14 @@ bool Docmala::readPlugin()
         }
     }
 
-    auto plugin = _pluginLoader.createExtension<DocumentPlugin>(name);
+    std::shared_ptr<DocumentPlugin> plugin;
+    if( _loadedDocumentPlugins.find(name) != _loadedDocumentPlugins.end() )
+    {
+        plugin = _loadedDocumentPlugins[name];
+    } else {
+        plugin = _pluginLoader.createExtension<DocumentPlugin>(name);
+        _loadedDocumentPlugins.insert(std::make_pair(name, plugin));
+    }
     if( !plugin ) {
         _errors.push_back(Error{nameBegin, std::string("Unable to load plugin with name: '") + name + "'." });
         return false;
