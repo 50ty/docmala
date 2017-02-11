@@ -19,3 +19,9 @@ add_subdirectory(plugins)
 
 add_executable(docmala "main.cpp")
 target_link_libraries(docmala extension_system libDocmala ${Boost_LIBRARIES})
+
+install(TARGETS docmala
+        RUNTIME DESTINATION bin
+        PUBLIC_HEADER DESTINATION include/docmala
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib/static)

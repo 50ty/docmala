@@ -8,11 +8,12 @@ class IncludePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block) override;
+    bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
     std::vector<Error> errors() const {
         return _errors;
     }
     std::vector<Error> _errors;
+    std::unique_ptr<Docmala> parser;
 };
 
 
@@ -20,11 +21,17 @@ DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
     return BlockProcessing::No;
 }
 
-bool IncludePlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block)
+bool IncludePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
     (void)block;
     (void)location;
-    (void)outDocument;
+    (void)document;
+
+    std::string pluginDir = "./plugins";
+    auto pluginDirIter = parameters.find("pluginDir");
+    if( pluginDirIter != parameters.end() ) {
+        pluginDir =  pluginDirIter->second.value + '/';
+    }
 
     std::string includeFile;
     std::string inputFile;
@@ -53,14 +60,17 @@ bool IncludePlugin::process( const ParameterList &parameters, const FileLocation
         keepHeadlineLevel = true;
     }
 
-    Docmala parser;
-    parser.parseFile(baseDir + "/" + includeFile, "");
+    if( !parser ) {
+        parser.reset(new Docmala(pluginDir));
+    }
 
-    std::vector<DocumentPart> doc = parser.document();
+    parser->parseFile(baseDir + "/" + includeFile);
+
+    auto doc = parser->document();
     int baseLevel = 1;
 
     if( !keepHeadlineLevel ) {
-        for( auto iter = outDocument.rbegin(); iter != outDocument.rend(); iter++ ) {
+        for( auto iter = document.parts().rbegin(); iter != document.parts().rend(); iter++ ) {
             if( iter->type() == DocumentPart::Type::Headline ) {
                 baseLevel = iter->headline()->level;
                 break;
@@ -68,14 +78,14 @@ bool IncludePlugin::process( const ParameterList &parameters, const FileLocation
         }
     }
 
-    for( auto &part : doc ) {
+    for( auto &part : doc.parts() ) {
         if( !keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline) ) {
             DocumentPart::Headline headline = *part.headline();
             headline.level += baseLevel;
-            outDocument.push_back(headline);
+            document.addPart(headline);
 
         } else {
-            outDocument.push_back(part);
+            document.addPart(part);
         }
 
     }

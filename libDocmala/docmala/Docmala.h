@@ -4,24 +4,31 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include <memory>
 
-#include <extension_system/ExtensionSystem.hpp>
 
 #include "Parameter.h"
-#include "DocumentPart.h"
-#include "DocmaPlugin.h"
+#include "Document.h"
 #include "Error.h"
-#include "File.h"
 
+namespace extension_system {
+    class ExtensionSystem;
+}
 namespace docmala {
+    class IFile;
+    class DocumentPlugin;
+    class OutputPlugin;
 
     class Docmala {
     public:
-        Docmala();
+        Docmala(const std::string &pluginDir = "./plugins");
+        ~Docmala();
 
-        bool parseFile( const std::string &fileName, const std::string &outputDir );
+        bool parseFile(const std::string &fileName);
+        bool parseData(const std::string &data, const std::string &fileName = "");
 
         bool produceOutput( const std::string &pluginName );
+        bool produceOutput( std::shared_ptr<OutputPlugin> plugin);
 
         std::vector<std::string> listOutputPlugins() const;
 
@@ -29,16 +36,18 @@ namespace docmala {
             return _errors;
         }
 
-        const std::vector<DocumentPart>& document() const {
+        const Document& document() const {
             return _document;
         }
 
     private:
+        bool parse();
 
         bool readHeadLine();
         bool readCaption();
         bool readLine(std::string &destination);
         bool readPlugin();
+        bool readAnchor();
         bool readText(char startCharacter, DocumentPart::Text &text);
         bool readParameterList(ParameterList &parameters, char blockEnd);
         bool readBlock(std::string &block);
@@ -51,11 +60,12 @@ namespace docmala {
          * A document consists of many document parts
          * All of these parts are stored in this variable
          */
-        std::vector<DocumentPart> _document;
-        File _file;
+        Document _document;
+        std::unique_ptr<IFile> _file;
         std::vector<Error> _errors;
-        extension_system::ExtensionSystem _pluginLoader;
+        std::unique_ptr<extension_system::ExtensionSystem> _pluginLoader;
         std::string _outputDir;
         std::map<std::string, std::shared_ptr<DocumentPlugin>> _loadedDocumentPlugins;
+        std::string _pluginDir;
     };
 }

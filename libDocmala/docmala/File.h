@@ -7,41 +7,88 @@
 
 namespace docmala {
 
-    class File {
+    class IFile {
     public:
-        File( ) {
-        }
 
-        explicit File( const std::string &fileName );
+        virtual ~IFile();
+        virtual bool isOpen() const = 0;
+        virtual bool isEoF() const = 0;
 
-        bool isOpen() const {
-            return _file.is_open();
-        }
+        virtual char getch() = 0;
+        virtual char previous() = 0;
+        virtual char following() = 0;
 
-        bool isEoF() const {
-            return _fileIterator >= _file.end();
-        }
+        virtual FileLocation location() const = 0;
+        virtual std::string fileName() const = 0;
 
-        std::string fileName() const;
+    };
 
-        char getch();
+//    class File : public IFile {
+//    public:
+//        File( ) {
+//        }
 
-        char previous();
-        char following();
+//        explicit File( const std::string &fileName );
 
-        FileLocation location() const;
+//        bool isOpen() const override {
+//            return _file.is_open();
+//        }
 
+//        bool isEoF() const override {
+//            return _fileIterator >= _file.end();
+//        }
+
+//        char getch() override;
+
+//        char previous() override;
+//        char following() override;
+
+//        FileLocation location() const override;
+
+//    private:
+//        char _getch();
+
+//        int _line = 1;
+//        int _column = 0;
+
+//        boost::iostreams::mapped_file::iterator _fileIterator;
+
+//        char _previous[2] = {0};
+//        std::string _fileName;
+//        boost::iostreams::mapped_file _file;
+//    };
+
+    class MemoryFile : public IFile {
+
+
+    public:
+        MemoryFile(const std::string &data, const std::string &fileName = "");
+        bool isOpen() const override;
+
+        bool isEoF() const override;
+        char getch() override;
+        char previous() override;
+        char following() override;
+        FileLocation location() const override;
+        std::string fileName() const override;
+
+    protected:
+        MemoryFile();
+        std::string _data;
+        std::string _fileName;
+        std::string::iterator _position;
     private:
         char _getch();
 
         int _line = 1;
         int _column = 0;
-
-        boost::iostreams::mapped_file::iterator _fileIterator;
-
         char _previous[2] = {0};
-        std::string _fileName;
-        boost::iostreams::mapped_file _file;
-        //std::ifstream _file;
+
+    };
+
+    class File : public MemoryFile {
+    public:
+
+        explicit File( const std::string &fileName );
     };
 }

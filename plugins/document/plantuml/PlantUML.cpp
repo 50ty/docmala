@@ -12,7 +12,7 @@ class PlantUMLPlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block) override;
+    bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
 
     std::unordered_map<std::string, DocumentPart::Image> _cache;
 };
@@ -22,20 +22,26 @@ DocumentPlugin::BlockProcessing PlantUMLPlugin::blockProcessing() const {
     return BlockProcessing::Required;
 }
 
-bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block)
+bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
     std::stringstream outputFileName;
 
     auto cachePosition = _cache.find(block);
+    std::string pluginDir;
 
     if( cachePosition != _cache.end() ) {
-        document.push_back( cachePosition->second );
+        document.addPart( cachePosition->second );
         return true;
     }
 
     auto outPathIter = parameters.find("outputDir");
     if( outPathIter != parameters.end() ) {
         outputFileName << outPathIter->second.value << "/";
+    }
+
+    auto pluginDirIter = parameters.find("pluginDir");
+    if( pluginDirIter != parameters.end() ) {
+        pluginDir =  pluginDirIter->second.value + '/';
     }
 
     outputFileName << "uml_" << "_" << location.line <<".png";
@@ -47,7 +53,7 @@ bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocatio
     int exit_code = 0;
     int in[2] = {0};
     int out[2] = {0};
-    std::string stringargs [] = {"java", "-jar", "plantuml.jar", "-p"};
+    std::string stringargs [] = {"java", "-jar", pluginDir + "plantuml.jar", "-p"};
     char *args [] = {&stringargs[0][0], &stringargs[1][0], &stringargs[2][0], &stringargs[3][0], nullptr};
 
     posix_spawn_file_actions_t action;
@@ -99,7 +105,7 @@ bool PlantUMLPlugin::process( const ParameterList &parameters, const FileLocatio
     DocumentPart::Text text;
     DocumentPart::Image image("png", imageData, text);
     _cache.insert(std::make_pair(block, image));
-    document.push_back( image );
+    document.addPart( image );
     return true;
 }
 

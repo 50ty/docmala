@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
         outputDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
     }
 
-    docmala.parseFile(inputFile, outputDir);
+    docmala.parseFile(inputFile);
 
     for( const auto &error : docmala.errors() ) {
         std::cout << error.location.fileName << "(" << error.location.line << ":" << error.location.column << "): " <<

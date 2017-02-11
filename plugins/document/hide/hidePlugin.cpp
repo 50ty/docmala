@@ -7,7 +7,7 @@ class HidePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block) override;
+    bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
 };
 
 
@@ -15,11 +15,11 @@ DocumentPlugin::BlockProcessing HidePlugin::blockProcessing() const {
     return BlockProcessing::Required;
 }
 
-bool HidePlugin::process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &outDocument, const std::string &block)
+bool HidePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
     (void)block;
     (void)location;
-    (void)outDocument;
+    (void)document;
     (void)parameters;
     return true;
 }

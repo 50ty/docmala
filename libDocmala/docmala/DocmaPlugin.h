@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "Parameter.h"
-#include "DocumentPart.h"
+#include "Document.h"
 
 namespace docmala {
     class DocumentPlugin {
@@ -18,14 +18,14 @@ namespace docmala {
 
         virtual ~DocumentPlugin();
         virtual BlockProcessing blockProcessing() const { return BlockProcessing::No; }
-        virtual bool process( const ParameterList &parameters, const FileLocation &location, std::vector<DocumentPart> &document, const std::string &block = "" ) = 0;
+        virtual bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block = "" ) = 0;
     };
     DocumentPlugin::~DocumentPlugin() {}
 
     class OutputPlugin {
     public:
         virtual ~OutputPlugin() {}
-        virtual bool write( const ParameterList &parameters, const std::vector<DocumentPart> &document ) = 0;
+        virtual bool write( const ParameterList &parameters, const Document &document ) = 0;
     };
 }
 

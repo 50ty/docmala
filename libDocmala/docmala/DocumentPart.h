@@ -4,6 +4,7 @@
 #include <vector>
 #include <boost/variant/variant.hpp>
 #include <boost/variant/get.hpp>
+#include "FileLocation.h"
 
 
 namespace docmala {
@@ -18,12 +19,18 @@ public:
         Paragraph,
         Image,
         Caption,
-        List
+        List,
+        Anchor
     };
 
     struct KeyValuePair {
         std::string key;
         std::string value;
+    };
+
+    struct Anchor {
+        std::string name;
+        FileLocation location;
     };
 
     struct Paragraph {
@@ -124,6 +131,11 @@ public:
         , _data( list )
     { }
 
+    DocumentPart( const Anchor &anchor )
+        : _type( Type::Anchor )
+        , _data( anchor )
+    { }
+
     Type type() const { return _type; }
 
     const Text* text() const {
@@ -150,6 +162,10 @@ public:
         return boost::get<List>(&_data);
     }
 
+    const Anchor* anchor() const {
+        return boost::get<Anchor>(&_data);
+    }
+
 private:
     template< class T >
     DocumentPart(Type type, const T &data)
@@ -162,7 +178,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List> _data;
+    boost::variant<Text, Caption, Headline, Image, List, Anchor> _data;
 };
 
 }
