@@ -1,0 +1,11 @@
+{
+    \"Name\" : \"Docmala\",
+    \"Version\" : \"0.0.1\",
+    \"CompatVersion\" : \"0.0.1\",
+    \"Vendor\" : \"MichaelAdam\",
+    \"Copyright\" : \"Michael Adam\",
+    \"License\" : \"LGPL V3\",
+    \"Description\" : \"Display rendered docmala documents\",
+    \"Url\" : \"http://www.mycompany.com\",
+    $$dependencyList
+}
