@@ -49,11 +49,12 @@ namespace docmala {
         bool readPlugin();
         bool readAnchor();
         bool readText(char startCharacter, DocumentPart::Text &text);
+
         bool readParameterList(ParameterList &parameters, char blockEnd);
         bool readBlock(std::string &block);
         bool readList(DocumentPart::List::Type type);
 
-        bool isWhitespace(char c) const;
+        bool isWhitespace(char c, bool allowEndline = false) const;
 
 
         /**

@@ -74,6 +74,11 @@ bool Docmala::parse()
     _document.clear();
     _errors.clear();
 
+    if( !_file->isOpen() ) {
+        _errors.push_back(Error{FileLocation(), "Unable to open file '" + _file->fileName() + "'." });
+        return false;
+    }
+
     enum class Mode {
         BeginOfLine
     } mode { Mode::BeginOfLine };
@@ -85,50 +90,50 @@ bool Docmala::parse()
         if( mode == Mode::BeginOfLine ) {
             switch(c)
             {
-                case ' ':
-                case '\t':
-                    continue;
-                case '\n':
-                    if( _document.parts().size() > 0 && _document.parts().back().type() != DocumentPart::Type::Paragraph ) {
-                        _document.addPart(DocumentPart(DocumentPart::Paragraph()));
-                    }
-                    continue;
-                case '=':
-                    readHeadLine();
-                    break;
-                case '.':
-                    readCaption();
-                    break;
-                case '[':
-                    if( _file->following() == '[' ) {
-                        readAnchor();
-                    } else {
-                        readPlugin();
-                    }
-                    break;
-                case '#':
-                    if( isWhitespace(_file->following() ) || _file->following() == '#'  ) {
-                        readList( DocumentPart::List::Type::Numbered );
-                    } else {
-                        DocumentPart::Text text;
-                        readText(c, text);
-                        _document.addPart(text);
-                    }
-                    break;
-                case '*':
-                    if( isWhitespace(_file->following() ) || _file->following() == '*' ) {
-                        readList( DocumentPart::List::Type::Points );
-                    } else {
-                        DocumentPart::Text text;
-                        readText(c, text);
-                        _document.addPart(text);
-                    }
-                    break;
-                default: {
+            case ' ':
+            case '\t':
+                continue;
+            case '\n':
+                if( _document.parts().size() > 0 && _document.parts().back().type() != DocumentPart::Type::Paragraph ) {
+                    _document.addPart(DocumentPart(DocumentPart::Paragraph()));
+                }
+                continue;
+            case '=':
+                readHeadLine();
+                break;
+            case '.':
+                readCaption();
+                break;
+            case '[':
+                if( _file->following() == '[' ) {
+                    readAnchor();
+                } else {
+                    readPlugin();
+                }
+                break;
+            case '#':
+                if( isWhitespace(_file->following() ) || _file->following() == '#'  ) {
+                    readList( DocumentPart::List::Type::Numbered );
+                } else {
                     DocumentPart::Text text;
                     readText(c, text);
                     _document.addPart(text);
                 }
+                break;
+            case '*':
+                if( isWhitespace(_file->following() ) || _file->following() == '*' ) {
+                    readList( DocumentPart::List::Type::Points );
+                } else {
+                    DocumentPart::Text text;
+                    readText(c, text);
+                    _document.addPart(text);
+                }
+                break;
+            default: {
+                DocumentPart::Text text;
+                readText(c, text);
+                _document.addPart(text);
+            }
             }
         }
     }
@@ -139,14 +144,13 @@ bool Docmala::readHeadLine()
 {
     int level = 1;
     while( !_file->isEoF() ) {
-        auto location = _file->location();
         char c = _file->getch();
         if( isWhitespace(c) ) {
             continue;
         }
 
         if( c == '\n' ) {
-            _errors.push_back(Error{location, std::string("Headline contains no text and is skipped.") });
+            _errors.push_back(Error{_file->location(), std::string("Headline contains no text and is skipped.") });
             return false;
         }
 
@@ -260,7 +264,7 @@ bool Docmala::readPlugin()
         return false;
     } else {
         if( plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Required ||
-            plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Optional ) {
+                plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Optional ) {
             std::string block;
             if( !readBlock(block) ) {
                 return false;
@@ -311,7 +315,7 @@ bool Docmala::readAnchor()
             }else if( (c >= 'a' && c <= 'z') ||
                       (c >= 'A' && c <= 'Z') ||
                       (c >= '0' && c <= '9') ||
-                       c == '_' || c == '-' ) {
+                      c == '_' || c == '-' ) {
                 name.push_back(c);
             } else {
                 _errors.push_back(Error{_file->location(), std::string("Error while parsing anchor. A valid anchor name consisting of [a'-'z', 'A'-'Z', '0'-'9', '_', '-'] or a anchor end']]' was expected but a '") + c +"' was found." });
@@ -325,7 +329,8 @@ bool Docmala::readAnchor()
                 auto prevAnchor = _document.anchors().find(name);
                 if( prevAnchor != _document.anchors().end() ) {
                     auto loc = prevAnchor->second.location;
-                    ErrorData additionalInfo {loc, std::string("Previous definition of '") + name + "'."};
+                    ErrorData additionalInfo {loc, std::string("Previous definition of '") + name + "' is at " +
+                                loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
                     _errors.push_back(Error{ location, std::string("Anchor with name '") + name + "' already defined.", {additionalInfo} });
                     return false;
                 }
@@ -366,46 +371,79 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
 
     while( true ) {
         if( isFormatSpecifier(c) ) {
-            if((isWhitespace(_file->previous()) || isFormatSpecifier(_file->previous()))
-                && !isWhitespace(_file->following()) ) {
-                if( !formatedText.text.empty() ) {
-                    text.text.push_back(formatedText);
-                    formatedText.text.clear();
-                }
+            const char previous = _file->previous();
+            const char following = _file->following();
+            if( (isWhitespace(previous) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
+                auto store = formatedText;
+                bool ok = false;
                 switch(c) {
                 case '_':
+                    ok = !formatedText.bold;
                     formatedText.bold = true;
                     break;
                 case '*':
+                    ok = !formatedText.italic;
                     formatedText.italic = true;
                     break;
                 case '-':
+                    ok = !formatedText.crossedOut;
                     formatedText.crossedOut = true;
                     break;
                 }
-            } else if( (!isWhitespace(_file->previous()) )
-                && ( isWhitespace(_file->following()) || isFormatSpecifier(_file->following()))) {
-                if( !formatedText.text.empty() ) {
-                    text.text.push_back(formatedText);
-                    formatedText.text.clear();
+                if( !ok ) {
+                    formatedText.text.push_back(c);
+                } else {
+                    if( !store.text.empty() ) {
+                        text.text.push_back(store);
+                        formatedText.text.clear();
+                    }
                 }
+            } else if( (!isWhitespace(previous) ) && ( isWhitespace(following, true) || isFormatSpecifier(following)) ) {
+                auto store = formatedText;
+                bool ok = false;
                 switch(c) {
                 case '_':
+                    ok = formatedText.bold;
                     formatedText.bold = false;
                     break;
                 case '*':
+                    ok = formatedText.italic;
                     formatedText.italic = false;
                     break;
                 case '-':
+                    ok = formatedText.crossedOut;
                     formatedText.crossedOut = false;
                     break;
                 }
+                if( !ok ) {
+                    formatedText.text.push_back(c);
+                } else {
+                    if( !store.text.empty() ) {
+                        text.text.push_back(store);
+                        formatedText.text.clear();
+                    }
+                }
+            } else {
+                formatedText.text.push_back(c);
             }
 
         } else if( c == '\n' ) {
             if( !formatedText.text.empty() )
                 text.text.push_back(formatedText);
-            return true;
+            bool ok = true;
+            if( formatedText.bold ) {
+                _errors.push_back(Error{_file->location(), std::string("Bold formating ('_') was not closed.") });
+                ok = false;
+            }
+            if( formatedText.italic ) {
+                _errors.push_back(Error{_file->location(), std::string("Italic formating ('*') was not closed.") });
+                ok = false;
+            }
+            if( formatedText.crossedOut ) {
+                _errors.push_back(Error{_file->location(), std::string("Crossed out formating ('-') was not closed.") });
+                ok = false;
+            }
+            return ok;
         } else if( c == '[' && _file->following() == '[' ) {
             if( !formatedText.text.empty() )
                 text.text.push_back(formatedText);
@@ -460,7 +498,7 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
             } else if( (c >= 'a' && c <= 'z') ||
                        (c >= 'A' && c <= 'Z') ||
                        (c >= '0' && c <= '9') ||
-                        c == '_' || c == '-' ) {
+                       c == '_' || c == '-' ) {
                 parameter.key.push_back(c);
             } else if( c == '=' ) {
                 if( parameter.key.empty() ) {
@@ -538,8 +576,8 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
                     continue;
                 } else {
                     _errors.push_back(Error{_file->location(), std::string("Error while parsing parameter value. " )
-                                                               + "A valid value has to start with ['a'-'z', 'A'-'Z', '0'-'9'] or "
-                                                               + " has to be placed in '\"' but a " + c +"' was found." });
+                                            + "A valid value has to start with ['a'-'z', 'A'-'Z', '0'-'9'] or "
+                                            + " has to be placed in '\"' but a " + c +"' was found." });
                     return false;
                 }
             } else {
@@ -646,7 +684,7 @@ bool Docmala::readList(DocumentPart::List::Type type)
         char c = _file->getch();
 
         if( (c == '*' && type == DocumentPart::List::Type::Points) ||
-            (c == '#' && type == DocumentPart::List::Type::Numbered) ) {
+                (c == '#' && type == DocumentPart::List::Type::Numbered) ) {
             level++;
         } else if( isWhitespace(c) ) {
             DocumentPart::Text text;
@@ -668,7 +706,7 @@ bool Docmala::readList(DocumentPart::List::Type type)
     return false;
 }
 
-bool Docmala::isWhitespace(char c) const
+bool Docmala::isWhitespace(char c, bool allowEndline) const
 {
-    return c == ' ' || c == '\t' || c == '\n' || c == '\0';
+    return c == ' ' || c == '\t' || (allowEndline && (c == '\n' || c == '\0'));
 }

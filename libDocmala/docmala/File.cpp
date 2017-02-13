@@ -133,12 +133,14 @@ char MemoryFile::following()
     auto pos = _position;
     auto line = _line;
     auto column = _column;
-
+    char previous[] = {_previous[0], _previous[1] };
     auto next = getch();
 
     _line = line;
     _column = column;
     _position = pos;
+    _previous[0] = previous[0];
+    _previous[1] = previous[1];
 
     return next;
 }
@@ -154,6 +156,7 @@ std::string MemoryFile::fileName() const
 }
 
 MemoryFile::MemoryFile()
+    : _position( _data.end() )
 {
 
 }
@@ -162,7 +165,7 @@ char MemoryFile::_getch()
 {
     char c = *_position;
     _position++;
-    if( c == '\n' ) {
+    if( previous() == '\n' ) {
         _line++;
         _column = 0;
     } else if( c == '\r' ) {

@@ -13,6 +13,8 @@ add_custom_command(
                 ${CMAKE_CURRENT_SOURCE_DIR}/plantuml.jar
                 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plantuml.jar )
 
+set_target_properties(PlantUMLPlugin PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 install(TARGETS PlantUMLPlugin LIBRARY DESTINATION bin/plugins)
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/plantuml.jar DESTINATION bin/plugins)

@@ -20,7 +20,6 @@ add_library(libDocmala SHARED
 set_target_properties(libDocmala PROPERTIES PUBLIC_HEADER "${LIBDOCMALA_PUBLIC_HEADERS}")
 
 target_link_libraries(libDocmala extension_system)
-set_property(TARGET libDocmala PROPERTY CXX_STANDARD 11)
 
 install(TARGETS libDocmala
         RUNTIME DESTINATION bin

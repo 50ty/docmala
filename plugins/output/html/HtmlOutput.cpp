@@ -131,7 +131,15 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
         // * text 2
 
         auto list = start->list();
-        if( currentLevel < list->level) {
+
+        if( currentLevel == list->level ) {
+            for( auto entry : list->entries ) {
+                outFile << "<li> ";
+                writeText(outFile, &entry);
+                outFile << " </li>" << std::endl;
+            }
+            return;
+        } else if( currentLevel < list->level ) {
             std::string type = "ul";
             std::string style;
             switch( list->type ) {
@@ -145,25 +153,18 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
             case DocumentPart::List::Type::Numbered:
                 type = "ol";
                 break;
-
             }
+
             currentLevel++;
             outFile << "<" << type << " " << style << ">" << std::endl;
             writeList(outFile, start, document, currentLevel);
             outFile << "</" << type << ">" << std::endl;
             currentLevel--;
-        } else if( currentLevel == list->level ) {
-            for( auto entry : list->entries ) {
-                outFile << "<li> ";
-                writeText(outFile, &entry);
-                outFile << " </li>" << std::endl;
-            }
         } else {
-            start--;
             return;
         }
-
     }
+    start--;
 }
 
 
@@ -209,7 +210,7 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     bool paragraphOpen = false;
     auto previous = document.parts().end();
 
-    for( auto part = document.parts().begin(); part != document.parts().end(); part++ ) {
+    for( std::vector<DocumentPart>::const_iterator part = document.parts().begin(); part != document.parts().end(); part++ ) {
         switch(part->type() ) {
         case DocumentPart::Type::Invalid:
             break;
