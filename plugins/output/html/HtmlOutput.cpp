@@ -86,12 +86,16 @@ public:
 };
 
 
-
+std::string id(const DocumentPart::VisualElement *element)
+{
+    return std::string(" id=\"line_") + std::to_string(element->line) +"\"";
+}
 
 void writeText(std::stringstream &outFile, const DocumentPart::Text *printText)
 {
-    for( const auto &text : printText->text )
-    {
+    outFile << "<span " << id(printText) << ">";
+
+    for( const auto &text : printText->text ) {
         if( text.bold ) {
             outFile << "<b>";
         }
@@ -101,7 +105,7 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText)
         if( text.crossedOut ) {
             outFile << "<del>";
         }
-        outFile << text.text << std::endl;
+        outFile << text.text;
 
         if( text.bold ) {
             outFile << "</b>";
@@ -113,6 +117,8 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText)
             outFile << "</del>";
         }
     }
+
+    outFile << "</span>" << std::endl;
 }
 
 void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, int currentLevel = 0)
@@ -167,9 +173,7 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
     start--;
 }
 
-
-
-std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document)
+std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string scripts)
 {
     std::string nameBase = "outfile";
     std::string outputFileName = "outfile.html";
@@ -202,6 +206,9 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     outFile << "ul.dash li:before { content: '-'; position: absolute; margin-left: -15px; }" << std::endl;
     outFile << "</style>" << std::endl;
 
+    outFile << "<script>" << std::endl;
+    outFile << scripts << std::endl;
+    outFile << "</script>" << std::endl;
     outFile << "</head>" << std::endl;
     outFile << "<body>" << std::endl;
     outFile << "" << std::endl;
@@ -209,6 +216,7 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
 
     bool paragraphOpen = false;
     auto previous = document.parts().end();
+
 
     for( std::vector<DocumentPart>::const_iterator part = document.parts().begin(); part != document.parts().end(); part++ ) {
         switch(part->type() ) {
@@ -281,7 +289,6 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
         outFile << "</p>" << std::endl;
         paragraphOpen = false;
     }
-
     outFile << "</body>" << std::endl;
 
     return outFile.str();

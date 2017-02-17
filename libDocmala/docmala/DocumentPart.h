@@ -23,6 +23,13 @@ public:
         Anchor
     };
 
+    struct VisualElement {
+        VisualElement(int lineNumber)
+            : line(lineNumber)
+        {}
+        int line;
+    };
+
     struct KeyValuePair {
         std::string key;
         std::string value;
@@ -46,14 +53,14 @@ public:
         bool crossedOut = false;
     };
 
-    struct Text {
-        Text() {}
+    struct Text : public VisualElement {
+        Text(int lineNumber = -1) : VisualElement(lineNumber) {}
 
         std::vector<FormatedText> text;
     };
 
     struct Headline : public Text {
-        Headline() {}
+        Headline() : Text(-1) {}
         Headline(const Text& text, int level)
             : Text(text)
             , level(level)
@@ -62,7 +69,7 @@ public:
         int level = 0;
     };
 
-    struct List : public Text {
+    struct List {
         enum class Type {
             Points,
             Dashes,

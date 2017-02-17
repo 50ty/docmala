@@ -98,8 +98,8 @@ bool MemoryFile::isEoF() const
 
 char MemoryFile::getch()
 {
-    char c = _getch();
     _previous[0] = _previous[1];
+    char c = _getch();
     _previous[1] = c;
 
     if( c == '.' ) {

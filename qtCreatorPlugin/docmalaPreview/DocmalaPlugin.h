@@ -63,6 +63,8 @@ private:
     std::string _renderLastFileName;
     QString _renderRenderedHTML;
     std::vector<docmala::Error> _renderOccuredErrors;
+    bool _previewFollowCursor = true;
+    bool _previewHighlightLine = true;
 };
 
 } // namespace Internal

@@ -11,7 +11,7 @@ namespace docmala {
     {
         // OutputPlugin interface
     public:
-        std::string produceHtml(const ParameterList &parameters, const Document &document);
+        std::string produceHtml(const ParameterList &parameters, const Document &document, const std::string scripts = "");
 
     //    void writeText(std::ofstream &outFile, const DocumentPart::Text *printText);
     //    void writeList(std::ofstream &outFile, std::vector<DocumentPart>::const_iterator &start, const std::vector<DocumentPart> &document, int currentLevel = 0);

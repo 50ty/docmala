@@ -22,6 +22,7 @@
 #include <QVBoxLayout>
 #include <QMutexLocker>
 
+#include <texteditor/texteditor.h>
 #include <texteditor/textdocument.h>
 #include <texteditor/normalindenter.h>
 #include <texteditor/texteditorconstants.h>
@@ -98,13 +99,26 @@ bool DocmalaPlugin::initialize(const QStringList &arguments, QString *errorStrin
     connect(Core::ICore::instance(), &Core::ICore::saveSettingsRequested,
             this, [this] { _settings.save(Core::ICore::settings()); });
 
-    connect(Core::EditorManager::EditorManager::instance(), &Core::EditorManager::EditorManager::currentEditorChanged, this, [this] {
+    connect(Core::EditorManager::EditorManager::instance(), &Core::EditorManager::EditorManager::currentEditorChanged, [this] {
         auto document = Core::EditorManager::instance()->currentDocument();
+
         //Core::EditorManager::instance()->currentEditor()->s
         disconnect(_documentChangedConnection);
         _document = document;
         _documentChangedConnection = connect( document, &Core::IDocument::contentsChanged, this, &DocmalaPlugin::updatePreview );
         documentChanged();
+        auto editor = TextEditor::BaseTextEditor::currentTextEditor();
+        if( editor != nullptr )
+             connect( editor->editorWidget(), &QPlainTextEdit::cursorPositionChanged, [this, editor] {
+                 if( _previewHighlightLine ) {
+                    _preview->page()->runJavaScript(QString("highlightLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+                 }
+
+                 if( _previewFollowCursor ) {
+                     _preview->page()->runJavaScript(QString("scrollToLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+                 }
+             });
+
     });
     //&DocmalaPlugin::updatePreview);
 
@@ -212,7 +226,35 @@ void DocmalaPlugin::render()
     HtmlOutput htmlOutput;
     ParameterList parameters;
     parameters.insert(std::make_pair("embedImages", Parameter{"embedImages", "", FileLocation() } ));
-    QString html = QString::fromStdString(htmlOutput.produceHtml(parameters, _docmala->document()));
+    std::string scripts = "var lastStyle;" "\n"
+                          "var lastElement = null;" "\n"
+    "function highlightLine(line) { " "\n"
+    "    if( lastElement ) lastElement.style = lastStyle;" "\n"
+    "    var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
+    "    if( myElement ) {" "\n"
+    "        lastStyle = myElement.style;" "\n"
+    "        myElement.style.border = \"2px solid grey\";" "\n"
+    "        myElement.style.borderRadius = \"6px\";" "\n"
+    "        myElement.style.background = \"lightgrey\";" "\n"
+    "    }" "\n"
+    "    lastElement = myElement;" "\n"
+    "}"
+    "function scrollToLine(line) { " "\n"
+    "    var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
+    "    if( myElement ) {" "\n"
+    "        const elementRect = myElement.getBoundingClientRect();" "\n"
+    "        const absoluteElementTop = elementRect.top + window.pageYOffset;" "\n"
+    "        const middle = absoluteElementTop - (window.innerHeight / 2);" "\n"
+    "        window.scrollTo(0, middle);" "\n"
+    "    }" "\n"
+    "    lastElement = myElement;" "\n"
+    "}";
+
+    QString html = QString::fromStdString(htmlOutput.produceHtml(parameters, _docmala->document(), scripts));
+    QFile f("/home/michael/test.html");
+    f.open(QIODevice::WriteOnly);
+    f.write(html.toLatin1());
+    f.close();
     {
         QMutexLocker locker(&_renderDataMutex);
         _renderRenderedHTML = html;

@@ -369,6 +369,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
         c = _file->getch();
     }
 
+    text.line = _file->location().line;
     while( true ) {
         if( isFormatSpecifier(c) ) {
             const char previous = _file->previous();
