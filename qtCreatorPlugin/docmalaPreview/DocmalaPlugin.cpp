@@ -309,6 +309,8 @@ void DocmalaPlugin::render()
     HtmlOutput htmlOutput;
     ParameterList parameters;
     parameters.insert(std::make_pair("embedImages", Parameter{"embedImages", "", FileLocation() } ));
+    parameters.insert(std::make_pair("pluginDir", Parameter{"pluginDir", _docmala->pluginDir(), FileLocation()} ) );
+
     std::string scripts = "var lastStyle;" "\n"
                           "var lastElement = null;" "\n"
     "function highlightLine(line) { " "\n"

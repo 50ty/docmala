@@ -21,7 +21,8 @@ public:
         Caption,
         List,
         Anchor,
-        GeneratedDocument
+        GeneratedDocument,
+        Code
     };
 
     struct VisualElement {
@@ -43,6 +44,11 @@ public:
 
     struct Paragraph {
 
+    };
+
+    struct Code {
+        std::string code;
+        std::string type;
     };
 
     struct FormatedText {
@@ -154,6 +160,11 @@ public:
         , _data( generated )
     { }
 
+    DocumentPart( const Code &code )
+        : _type( Type::Code )
+        , _data( code )
+    { }
+
     Type type() const { return _type; }
 
     const Text* text() const {
@@ -188,6 +199,10 @@ public:
         return boost::get<GeneratedDocument>(&_data);
     }
 
+    const Code* code() const {
+        return boost::get<Code>(&_data);
+    }
+
 private:
     template< class T >
     DocumentPart(Type type, const T &data)
@@ -200,7 +215,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List, Anchor, GeneratedDocument> _data;
+    boost::variant<Text, Caption, Headline, Image, List, Anchor, GeneratedDocument, Code> _data;
 };
 
 }

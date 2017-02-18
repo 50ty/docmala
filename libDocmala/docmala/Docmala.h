@@ -41,6 +41,9 @@ namespace docmala {
             return _document;
         }
 
+        const std::string &pluginDir() const {
+            return _pluginDir;
+        }
     private:
         bool parse();
 

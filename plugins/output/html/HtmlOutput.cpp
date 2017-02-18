@@ -2,6 +2,7 @@
 #include <docmala/DocmaPlugin.h>
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 #include "HtmlOutput.h"
 
@@ -85,6 +86,24 @@ public:
     }
 };
 
+void replaceAll( std::string& source, const std::string& from, const std::string& to )
+{
+    std::string newString;
+    newString.reserve( source.length() );  // avoids a few memory allocations
+
+    std::string::size_type lastPos = 0;
+    std::string::size_type findPos = 0;
+
+    while( std::string::npos != ( findPos = source.find( from, lastPos ))) {
+        newString.append( source, lastPos, findPos - lastPos );
+        newString += to;
+        lastPos = findPos + from.length();
+    }
+
+    newString += source.substr( lastPos );
+
+    source.swap( newString );
+}
 
 std::string id(const DocumentPart::VisualElement *element)
 {
@@ -184,7 +203,6 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
     bool paragraphOpen = false;
     auto previous = document.parts().end();
 
-
     bool embedImages = parameters.find("embedImages") != parameters.end();
 
 
@@ -256,6 +274,17 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             outFile << "</div>" << std::endl;
             break;
         }
+        case DocumentPart::Type::Code: {
+            auto code = part->code();
+
+            if( !code->type.empty() ) {
+                outFile << "<pre> <code class=\""<<code->type<<"\">" << std::endl;
+            } else {
+                outFile << "<pre> <code>" << std::endl;
+            }
+            outFile << code->code << std::endl;
+            outFile << "</code> </pre>" << std::endl;
+        }
         default:
             break;
         }
@@ -281,6 +310,31 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
         outputFileName = _nameBase + ".html";
     }
 
+    std::string pluginDir;
+    auto pluginDirIter = parameters.find("pluginDir");
+    if( pluginDirIter != parameters.end() ) {
+        pluginDir =  pluginDirIter->second.value + '/';
+    }
+
+    std::string codeHighlightScript;
+
+    std::ifstream in(pluginDir + "/htmlOutputPluginCodeHighlight.js", std::ios::in | std::ios::binary);
+    if (in)
+    {
+        in.seekg(0, std::ios::end);
+        codeHighlightScript.resize( static_cast<std::string::size_type>(in.tellg()));
+        in.seekg(0, std::ios::beg);
+        in.read(&codeHighlightScript[0], static_cast<std::streamsize>(codeHighlightScript.size()));
+        in.close();
+
+        replaceAll( codeHighlightScript, "&", "&amp;");
+        replaceAll( codeHighlightScript, "<", "&lt;");
+        replaceAll( codeHighlightScript, ">", "&gt;");
+        replaceAll( codeHighlightScript, "\"", "&quot;");
+        replaceAll( codeHighlightScript, "'", "&#039;");
+    }
+
+
     std::stringstream outFile;
 
 
@@ -297,8 +351,12 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     outFile << "</style>" << std::endl;
 
     outFile << "<script>" << std::endl;
+
     outFile << scripts << std::endl;
     outFile << "</script>" << std::endl;
+    outFile << "<script>"<< codeHighlightScript << std::endl;
+    outFile << "</script>"  << std::endl;
+    outFile << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
     outFile << "</head>" << std::endl;
     outFile << "<body>" << std::endl;
     outFile << "" << std::endl;
