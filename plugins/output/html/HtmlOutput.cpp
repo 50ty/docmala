@@ -88,12 +88,16 @@ public:
 
 std::string id(const DocumentPart::VisualElement *element)
 {
-    return std::string(" id=\"line_") + std::to_string(element->line) +"\"";
+    if( element->line > 0 )
+        return std::string(" id=\"line_") + std::to_string(element->line) +"\"";
+    return "";
 }
 
-void writeText(std::stringstream &outFile, const DocumentPart::Text *printText)
+void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, bool isGenerated)
 {
-    outFile << "<span " << id(printText) << ">";
+    if( !isGenerated ) {
+        outFile << "<span " << id(printText) << ">";
+    }
 
     for( const auto &text : printText->text ) {
         if( text.bold ) {
@@ -118,10 +122,12 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText)
         }
     }
 
-    outFile << "</span>" << std::endl;
+    if( !isGenerated ) {
+        outFile << "</span>" << std::endl;
+    }
 }
 
-void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, int currentLevel = 0)
+void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0)
 {
     for( ; start != document.parts().end(); start++ ) {
         if( start->type() != DocumentPart::Type::List ) {
@@ -141,7 +147,7 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
         if( currentLevel == list->level ) {
             for( auto entry : list->entries ) {
                 outFile << "<li> ";
-                writeText(outFile, &entry);
+                writeText(outFile, &entry, isGenerated);
                 outFile << " </li>" << std::endl;
             }
             return;
@@ -163,7 +169,7 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
 
             currentLevel++;
             outFile << "<" << type << " " << style << ">" << std::endl;
-            writeList(outFile, start, document, currentLevel);
+            writeList(outFile, start, document, isGenerated, currentLevel);
             outFile << "</" << type << ">" << std::endl;
             currentLevel--;
         } else {
@@ -173,26 +179,110 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
     start--;
 }
 
+void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterList &parameters, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
+{
+    bool paragraphOpen = false;
+    auto previous = document.parts().end();
+
+
+    bool embedImages = parameters.find("embedImages") != parameters.end();
+
+
+    for( std::vector<DocumentPart>::const_iterator part = documentParts.begin(); part != documentParts.end(); part++ ) {
+        switch(part->type() ) {
+        case DocumentPart::Type::Invalid:
+            break;
+        case DocumentPart::Type::Custom:
+            break;
+        case DocumentPart::Type::Headline: {
+            if( paragraphOpen ) {
+                outFile << "</p>" << std::endl;
+                paragraphOpen = false;
+            }
+            auto headline = part->headline();
+            outFile << "<h" << headline->level << ">";
+            writeText(outFile, headline, isGenerated);
+            outFile << "</h" << headline->level << ">" << std::endl;
+            break;
+        }
+        case DocumentPart::Type::Text: {
+            auto text = part->text();
+            writeText(outFile, text, isGenerated);
+            break;
+        }
+        case DocumentPart::Type::Paragraph:
+            if( paragraphOpen ) {
+                outFile << "</p>" << std::endl;
+                paragraphOpen = false;
+            }
+            outFile << "<p>" << std::endl;
+            paragraphOpen = true;
+            break;
+        case DocumentPart::Type::Image: {
+            auto image = part->image();
+            outFile << "<figure"<<id(image)<<">" << std::endl;
+            if( embedImages ) {
+                outFile << "<img src=\"data:image/" << image->format << ";base64,";
+                outFile << base64_encode( image->data );
+                outFile << "\">";
+            } else {
+                std::ofstream imgFile;
+                std::stringstream fileName;
+                fileName << _nameBase << "_image_" << _imageCounter << "." << image->format;
+
+                imgFile.open(fileName.str());
+                imgFile << image->data;
+                imgFile.close();
+                outFile << "<img src=\"" << fileName.str() <<"\">" << std::endl;
+            }
+            if( previous != document.parts().end() && previous->type() == DocumentPart::Type::Caption ) {
+                outFile << "<figcaption>Figure " << _figureCounter << ": ";
+                writeText(outFile, previous->caption(), isGenerated );
+                outFile << "</figcaption>" << std::endl;
+                _figureCounter++;
+            }
+            outFile << "</figure>" << std::endl;
+            _imageCounter++;
+            break;
+        }
+        case DocumentPart::Type::List: {
+            writeList(outFile, part, document, isGenerated);
+            break;
+        }
+        case DocumentPart::Type::GeneratedDocument: {
+            auto generated = part->generatedDocument();
+            outFile << "<div " << id(generated) << ">" << std::endl;
+            writeDocumentParts(outFile, parameters, document, generated->document, true);
+            outFile << "</div>" << std::endl;
+            break;
+        }
+        default:
+            break;
+        }
+        previous = part;
+    }
+
+    if( paragraphOpen ) {
+        outFile << "</p>" << std::endl;
+        paragraphOpen = false;
+    }
+
+}
+
 std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string scripts)
 {
-    std::string nameBase = "outfile";
     std::string outputFileName = "outfile.html";
 
     auto inputFile = parameters.find("inputFile");
 
     if( inputFile != parameters.end() ) {
         outputFileName = inputFile->second.value;
-        nameBase = outputFileName.substr(0, outputFileName.find_last_of("."));
-        outputFileName = nameBase + ".html";
+        _nameBase = outputFileName.substr(0, outputFileName.find_last_of("."));
+        outputFileName = _nameBase + ".html";
     }
-
-    bool embedImages = parameters.find("embedImages") != parameters.end();
-
 
     std::stringstream outFile;
 
-    unsigned int imageCounter = 1;
-    unsigned int figureCounter = 1;
 
     outFile << "<!doctype html>" << std::endl;
     outFile << "<html>" << std::endl;
@@ -214,82 +304,9 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     outFile << "" << std::endl;
     outFile << "" << std::endl;
 
-    bool paragraphOpen = false;
-    auto previous = document.parts().end();
-
-
-    for( std::vector<DocumentPart>::const_iterator part = document.parts().begin(); part != document.parts().end(); part++ ) {
-        switch(part->type() ) {
-        case DocumentPart::Type::Invalid:
-            break;
-        case DocumentPart::Type::Custom:
-            break;
-        case DocumentPart::Type::Headline: {
-            if( paragraphOpen ) {
-                outFile << "</p>" << std::endl;
-                paragraphOpen = false;
-            }
-            auto headline = part->headline();
-            outFile << "<h" << headline->level << ">";
-            writeText(outFile, headline);
-            outFile << "</h" << headline->level << ">" << std::endl;
-            break;
-        }
-        case DocumentPart::Type::Text: {
-            auto text = part->text();
-            writeText(outFile, text);
-            break;
-        }
-        case DocumentPart::Type::Paragraph:
-            if( paragraphOpen ) {
-                outFile << "</p>" << std::endl;
-                paragraphOpen = false;
-            }
-            outFile << "<p>" << std::endl;
-            paragraphOpen = true;
-            break;
-        case DocumentPart::Type::Image: {
-            auto image = part->image();
-            outFile << "<figure>" << std::endl;
-            if( embedImages ) {
-                outFile << "<img src=\"data:image/" << image->format << ";base64,";
-                outFile << base64_encode( image->data );
-                outFile << "\">";
-            } else {
-                std::ofstream imgFile;
-                std::stringstream fileName;
-                fileName << nameBase << "_image_" << imageCounter << "." << image->format;
-
-                imgFile.open(fileName.str());
-                imgFile << image->data;
-                imgFile.close();
-                outFile << "<img src=\"" << fileName.str() <<"\">" << std::endl;
-            }
-            if( previous != document.parts().end() && previous->type() == DocumentPart::Type::Caption ) {
-                outFile << "<figcaption>Figure " << figureCounter << ": ";
-                writeText(outFile, previous->caption() );
-                outFile << "</figcaption>" << std::endl;
-                figureCounter++;
-            }
-            outFile << "</figure>" << std::endl;
-            imageCounter++;
-            break;
-        }
-        case DocumentPart::Type::List: {
-            writeList(outFile, part, document);
-            break;
-        }
-        default:
-            break;
-        }
-        previous = part;
-    }
-
-    if( paragraphOpen ) {
-        outFile << "</p>" << std::endl;
-        paragraphOpen = false;
-    }
     outFile << "</body>" << std::endl;
+
+    writeDocumentParts(outFile, parameters, document, document.parts() );
 
     return outFile.str();
 }

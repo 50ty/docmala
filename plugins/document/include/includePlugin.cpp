@@ -68,6 +68,8 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
 
     auto doc = parser->document();
     int baseLevel = 1;
+    DocumentPart::GeneratedDocument generated(location.line);
+
 
     if( !keepHeadlineLevel ) {
         for( auto iter = document.parts().rbegin(); iter != document.parts().rend(); iter++ ) {
@@ -82,14 +84,14 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
         if( !keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline) ) {
             DocumentPart::Headline headline = *part.headline();
             headline.level += baseLevel;
-            document.addPart(headline);
+            generated.document.push_back(headline);
 
         } else {
-            document.addPart(part);
+            generated.document.push_back(part);
         }
-
     }
 
+    document.addPart(generated);
 
     return true;
 }

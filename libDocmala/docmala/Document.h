@@ -12,8 +12,18 @@ namespace docmala {
             _parts.push_back(part);
             if( part.type() == DocumentPart::Type::Anchor ) {
                 _anchors.insert(std::make_pair(part.anchor()->name, *part.anchor()));
+            } else if( part.type() == DocumentPart::Type::GeneratedDocument ) {
+                for( const auto &p : part.generatedDocument()->document ) {
+                    if( p.type() == DocumentPart::Type::Anchor ) {
+                        _anchors.insert(std::make_pair(p.anchor()->name, *p.anchor()));
+                    }
+                }
             }
         }
+        void inheritFrom(const Document &other) {
+            _anchors = other.anchors();
+        }
+
         void clear() {
             _parts.clear();
             _anchors.clear();

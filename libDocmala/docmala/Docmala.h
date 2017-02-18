@@ -22,6 +22,7 @@ namespace docmala {
     class Docmala {
     public:
         Docmala(const std::string &pluginDir = "./plugins");
+        Docmala(const Document other, const std::string &pluginDir = "./plugins");
         ~Docmala();
 
         bool parseFile(const std::string &fileName);

@@ -109,14 +109,8 @@ bool DocmalaPlugin::initialize(const QStringList &arguments, QString *errorStrin
         documentChanged();
         auto editor = TextEditor::BaseTextEditor::currentTextEditor();
         if( editor != nullptr )
-             connect( editor->editorWidget(), &QPlainTextEdit::cursorPositionChanged, [this, editor] {
-                 if( _previewHighlightLine ) {
-                    _preview->page()->runJavaScript(QString("highlightLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
-                 }
-
-                 if( _previewFollowCursor ) {
-                     _preview->page()->runJavaScript(QString("scrollToLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
-                 }
+             connect( editor->editorWidget(), &QPlainTextEdit::cursorPositionChanged, [this] {
+                updateHighLight();
              });
 
     });
@@ -147,6 +141,8 @@ void DocmalaPlugin::extensionsInitialized()
 
         _preview = new QWebEngineView (nullptr);
         _preview->setPage (new QWebEnginePage());
+        connect(_preview->page(), &QWebEnginePage::loadStarted, [this] {_pageIsLoaded = false;});
+        connect(_preview->page(), &QWebEnginePage::loadFinished, [this] {_pageIsLoaded = true;});
         _preview->setStyleSheet (QStringLiteral ("QWebEngineView {background: #FFFFFF;}"));
 
         layout->addWidget(_preview);
@@ -201,8 +197,31 @@ void DocmalaPlugin::updatePreview()
     QMutexLocker locker(&_renderDataMutex);
     _renderContent = _document->contents();
     _renderFileName = _document->filePath().toString();
-
+    auto editor = TextEditor::BaseTextEditor::currentTextEditor();
+    if( editor ) {
+        _renderCurrentLine = editor->editorWidget()->textCursor().blockNumber()+1;
+    } else {
+         _renderCurrentLine = -1;
+    }
+    _renderPreviewFollowCursor = _previewFollowCursor;
+    _renderPreviewHighlightLine = _previewHighlightLine;
     QMetaObject::invokeMethod(&_renderTimer, "start", Qt::QueuedConnection);
+}
+
+void DocmalaPlugin::updateHighLight()
+{
+    if( !_pageIsLoaded )
+        return;
+    auto editor = TextEditor::BaseTextEditor::currentTextEditor();
+    if( editor ) {
+        if( _previewHighlightLine ) {
+           _preview->page()->runJavaScript(QString("highlightLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+        }
+
+        if( _previewFollowCursor ) {
+            _preview->page()->runJavaScript(QString("scrollToLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+        }
+    }
 }
 
 void DocmalaPlugin::render()
@@ -238,7 +257,7 @@ void DocmalaPlugin::render()
     "        myElement.style.background = \"lightgrey\";" "\n"
     "    }" "\n"
     "    lastElement = myElement;" "\n"
-    "}"
+    "}" "\n"
     "function scrollToLine(line) { " "\n"
     "    var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
     "    if( myElement ) {" "\n"
@@ -248,7 +267,24 @@ void DocmalaPlugin::render()
     "        window.scrollTo(0, middle);" "\n"
     "    }" "\n"
     "    lastElement = myElement;" "\n"
-    "}";
+    "}" "\n";
+
+    scripts += "function editCurrentLine() { " "\n";
+    if( _renderPreviewFollowCursor && _renderCurrentLine != -1 ) {
+        scripts += "scrollToLine("+std::to_string(_renderCurrentLine)+");" "\n";
+    }
+    if( _renderPreviewHighlightLine && _renderCurrentLine != -1 ) {
+        scripts += "highlightLine("+std::to_string(_renderCurrentLine)+");" "\n";
+    }
+    scripts += "}" "\n";
+
+    scripts +=
+    "if (window.addEventListener)" "\n"
+    "    window.addEventListener(\"load\", editCurrentLine, false);" "\n"
+    "else if (window.attachEvent)" "\n"
+    "    window.attachEvent(\"onload\", editCurrentLine);" "\n"
+    "else window.onload = editCurrentLine;" "\n"
+    ;
 
     QString html = QString::fromStdString(htmlOutput.produceHtml(parameters, _docmala->document(), scripts));
     QFile f("/home/michael/test.html");
@@ -283,7 +319,7 @@ void DocmalaPlugin::renderingFinished()
 {
     QMutexLocker locker(&_renderDataMutex);
     _preview->page()->setHtml( _renderRenderedHTML, QUrl() );
-    ProjectExplorer::TaskHub::clearTasks(Constants::DOCMALA_TASK_ID);
+     ProjectExplorer::TaskHub::clearTasks(Constants::DOCMALA_TASK_ID);
     for( auto error : _renderOccuredErrors ) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task(
                                               ProjectExplorer::Task::Error,

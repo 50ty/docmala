@@ -12,7 +12,7 @@ public:
 
 
 DocumentPlugin::BlockProcessing HidePlugin::blockProcessing() const {
-    return BlockProcessing::Required;
+    return BlockProcessing::Optional;
 }
 
 bool HidePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)

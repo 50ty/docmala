@@ -15,6 +15,12 @@ Docmala::Docmala(const std::string &pluginDir)
     _pluginLoader->searchDirectory(pluginDir, false);
 }
 
+Docmala::Docmala(const Document other, const std::string &pluginDir)
+    : Docmala(pluginDir)
+{
+    _document.inheritFrom(other);
+}
+
 Docmala::~Docmala()
 {
 

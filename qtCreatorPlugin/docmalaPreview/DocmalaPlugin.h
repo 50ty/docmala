@@ -44,6 +44,7 @@ private:
 
     void documentChanged();
     void updatePreview();
+    void updateHighLight();
 
     void render();
 
@@ -55,6 +56,7 @@ private:
     Core::IDocument* _document;
     QScopedPointer<Docmala> _docmala;
     QMetaObject::Connection _documentChangedConnection;
+    bool _pageIsLoaded = false;
     QThread _renderThread;
     QTimer _renderTimer;
     QMutex _renderDataMutex;
@@ -62,6 +64,9 @@ private:
     QString _renderFileName;
     std::string _renderLastFileName;
     QString _renderRenderedHTML;
+    int _renderCurrentLine = -1;
+    bool _renderPreviewFollowCursor = true;
+    bool _renderPreviewHighlightLine = true;
     std::vector<docmala::Error> _renderOccuredErrors;
     bool _previewFollowCursor = true;
     bool _previewHighlightLine = true;

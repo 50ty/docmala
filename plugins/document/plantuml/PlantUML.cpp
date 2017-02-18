@@ -102,7 +102,7 @@ bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation
     waitpid(pid,&exit_code,0);
     posix_spawn_file_actions_destroy(&action);
 
-    DocumentPart::Text text;
+    DocumentPart::Text text(location.line);
     DocumentPart::Image image("png", imageData, text);
     _cache.insert(std::make_pair(block, image));
     document.addPart( image );

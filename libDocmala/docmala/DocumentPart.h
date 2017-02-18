@@ -20,7 +20,8 @@ public:
         Image,
         Caption,
         List,
-        Anchor
+        Anchor,
+        GeneratedDocument
     };
 
     struct VisualElement {
@@ -51,6 +52,11 @@ public:
         bool bold = false;
         bool italic = false;
         bool crossedOut = false;
+    };
+
+    struct GeneratedDocument : public VisualElement {
+        GeneratedDocument( int lineNumber ) : VisualElement(lineNumber) {}
+        std::vector<DocumentPart> document;
     };
 
     struct Text : public VisualElement {
@@ -143,6 +149,11 @@ public:
         , _data( anchor )
     { }
 
+    DocumentPart( const GeneratedDocument &generated )
+        : _type( Type::GeneratedDocument )
+        , _data( generated )
+    { }
+
     Type type() const { return _type; }
 
     const Text* text() const {
@@ -173,6 +184,10 @@ public:
         return boost::get<Anchor>(&_data);
     }
 
+    const GeneratedDocument* generatedDocument() const {
+        return boost::get<GeneratedDocument>(&_data);
+    }
+
 private:
     template< class T >
     DocumentPart(Type type, const T &data)
@@ -185,7 +200,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List, Anchor> _data;
+    boost::variant<Text, Caption, Headline, Image, List, Anchor, GeneratedDocument> _data;
 };
 
 }
