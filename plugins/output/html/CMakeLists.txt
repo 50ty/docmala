@@ -23,4 +23,7 @@ install(TARGETS htmlOutputPlugin
         PUBLIC_HEADER DESTINATION include/docmala
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib/static)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js DESTINATION bin/plugins)
+
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js
+              ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.css
+    DESTINATION bin/plugins)

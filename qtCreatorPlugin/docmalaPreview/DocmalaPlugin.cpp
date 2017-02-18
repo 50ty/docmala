@@ -122,8 +122,6 @@ bool DocmalaPlugin::initialize(const QStringList &arguments, QString *errorStrin
     return true;
 }
 
-#include <QDebug>
-
 void DocmalaPlugin::extensionsInitialized()
 {
     // Retrieve objects from the plugin manager's object pool
@@ -187,19 +185,16 @@ void DocmalaPlugin::extensionsInitialized()
         _preview = new QWebEngineView (nullptr);
         _preview->setPage (new QWebEnginePage());
         connect(_preview->page(), &QWebEnginePage::loadStarted, [this] {
-            qDebug() << "Load Started";
             _pageIsLoaded = false;
         });
         connect(_preview->page(), &QWebEnginePage::loadFinished, [this] {
             _pageIsLoaded = true;
             _preview->page()->view()->setUpdatesEnabled(true);
             _preview->page()->view()->update();
-            qDebug() << "Load Finished";
         });
         connect(_preview->page(), &QWebEnginePage::scrollPositionChanged, [this](const QPointF &position) {
             if( !position.isNull() )
                 _scrollPosition = position;
-            qDebug() << "Scroll Position changed " << position;
         });
 
         _preview->setStyleSheet (QStringLiteral ("QWebEngineView {background: #FFFFFF;}"));
@@ -355,10 +350,10 @@ void DocmalaPlugin::render()
     ;
 
     QString html = QString::fromStdString(htmlOutput.produceHtml(parameters, _docmala->document(), scripts));
-    QFile f("/home/michael/test.html");
-    f.open(QIODevice::WriteOnly);
-    f.write(html.toLatin1());
-    f.close();
+//    QFile f("/home/michael/test.html");
+//    f.open(QIODevice::WriteOnly);
+//    f.write(html.toLatin1());
+//    f.close();
     {
         QMutexLocker locker(&_renderDataMutex);
         _renderRenderedHTML = html;
@@ -388,6 +383,7 @@ void DocmalaPlugin::renderingFinished()
     QMutexLocker locker(&_renderDataMutex);
     _preview->page()->view()->setUpdatesEnabled(true);
     _preview->page()->setHtml( _renderRenderedHTML, QUrl() );
+    //_preview->page()->load(QUrl("file:///home/michael/test.html"));
      ProjectExplorer::TaskHub::clearTasks(Constants::DOCMALA_TASK_ID);
     for( auto error : _renderOccuredErrors ) {
         ProjectExplorer::TaskHub::addTask(ProjectExplorer::Task(

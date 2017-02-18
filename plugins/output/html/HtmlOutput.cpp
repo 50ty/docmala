@@ -278,7 +278,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             auto code = part->code();
 
             if( !code->type.empty() ) {
-                outFile << "<pre> <code class=\""<<code->type<<"\">" << std::endl;
+                outFile << "<pre"<<id(code)<<"> <code class=\""<<code->type<<"\">" << std::endl;
             } else {
                 outFile << "<pre> <code>" << std::endl;
             }
@@ -317,23 +317,31 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     }
 
     std::string codeHighlightScript;
+    std::string codeHighlightCSS;
 
-    std::ifstream in(pluginDir + "/htmlOutputPluginCodeHighlight.js", std::ios::in | std::ios::binary);
-    if (in)
+    std::ifstream highlightReader(pluginDir + "/htmlOutputPluginCodeHighlight.js", std::ios::in | std::ios::binary);
+    if (highlightReader)
     {
-        in.seekg(0, std::ios::end);
-        codeHighlightScript.resize( static_cast<std::string::size_type>(in.tellg()));
-        in.seekg(0, std::ios::beg);
-        in.read(&codeHighlightScript[0], static_cast<std::streamsize>(codeHighlightScript.size()));
-        in.close();
+        highlightReader.seekg(0, std::ios::end);
+        codeHighlightScript.resize( static_cast<std::string::size_type>(highlightReader.tellg()));
+        highlightReader.seekg(0, std::ios::beg);
+        highlightReader.read(&codeHighlightScript[0], static_cast<std::streamsize>(codeHighlightScript.size()));
+        highlightReader.close();
 
-        replaceAll( codeHighlightScript, "&", "&amp;");
-        replaceAll( codeHighlightScript, "<", "&lt;");
-        replaceAll( codeHighlightScript, ">", "&gt;");
-        replaceAll( codeHighlightScript, "\"", "&quot;");
-        replaceAll( codeHighlightScript, "'", "&#039;");
+        replaceAll( codeHighlightScript, "<script", "&lt;script");
+        replaceAll( codeHighlightScript, "</script", "&lt;/script");
     }
 
+
+    std::ifstream cssReader(pluginDir + "/htmlOutputPluginCodeHighlight.css", std::ios::in | std::ios::binary);
+    if (cssReader)
+    {
+        cssReader.seekg(0, std::ios::end);
+        codeHighlightCSS.resize( static_cast<std::string::size_type>(cssReader.tellg()));
+        cssReader.seekg(0, std::ios::beg);
+        cssReader.read(&codeHighlightCSS[0], static_cast<std::streamsize>(codeHighlightCSS.size()));
+        cssReader.close();
+    }
 
     std::stringstream outFile;
 
@@ -348,14 +356,30 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
     outFile << "ul.dash { list-style-type: none; }" << std::endl;
 
     outFile << "ul.dash li:before { content: '-'; position: absolute; margin-left: -15px; }" << std::endl;
+
+    outFile << codeHighlightCSS << std::endl;
     outFile << "</style>" << std::endl;
 
     outFile << "<script>" << std::endl;
 
     outFile << scripts << std::endl;
     outFile << "</script>" << std::endl;
-    outFile << "<script>"<< codeHighlightScript << std::endl;
-    outFile << "</script>"  << std::endl;
+    //outFile << "<script src=\""<< pluginDir << "/htmlOutputPluginCodeHighlight.js" <<"\">" << std::endl;
+    outFile << "<script>" << std::endl;
+//    outFile << "//<![CDATA[" << std::endl;
+    outFile << codeHighlightScript << std::endl;
+//    outFile << "//]]>" << std::endl;
+    outFile << "</script>" << std::endl;
+
+    outFile << "<script>"
+               "function initCodeHighlight() { hljs.initHighlightingOnLoad(); }" "\n"
+               "if (window.addEventListener)" "\n"
+               "    window.addEventListener(\"load\", initCodeHighlight, false);" "\n"
+               "else if (window.attachEvent)" "\n"
+               "    window.attachEvent(\"onload\", initCodeHighlight);" "\n"
+               "else window.onload = initCodeHighlight;" "\n"
+               "</script>"
+    ;
     outFile << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
     outFile << "</head>" << std::endl;
     outFile << "<body>" << std::endl;

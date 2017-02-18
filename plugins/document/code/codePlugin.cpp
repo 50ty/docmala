@@ -27,7 +27,7 @@ bool CodePlugin::process(const ParameterList &parameters, const FileLocation &lo
     (void)document;
     (void)parameters;
 
-    DocumentPart::Code code;
+    DocumentPart::Code code(location.line);
 
     auto inFileIter = parameters.find("type");
     if( inFileIter != parameters.end() ) {

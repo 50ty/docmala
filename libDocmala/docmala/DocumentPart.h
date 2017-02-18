@@ -46,7 +46,8 @@ public:
 
     };
 
-    struct Code {
+    struct Code : public VisualElement {
+        Code(int lineNumber) : VisualElement(lineNumber) {}
         std::string code;
         std::string type;
     };
