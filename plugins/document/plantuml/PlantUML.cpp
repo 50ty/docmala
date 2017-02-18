@@ -30,7 +30,9 @@ bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation
     std::string pluginDir;
 
     if( cachePosition != _cache.end() ) {
-        document.addPart( cachePosition->second );
+        DocumentPart::Image image = cachePosition->second;
+        image.line = location.line;
+        document.addPart( image );
         return true;
     }
 
