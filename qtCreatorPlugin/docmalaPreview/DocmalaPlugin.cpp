@@ -21,6 +21,7 @@
 #include <QCoreApplication>
 #include <QVBoxLayout>
 #include <QMutexLocker>
+#include <QToolButton>
 
 #include <texteditor/texteditor.h>
 #include <texteditor/textdocument.h>
@@ -29,6 +30,7 @@
 #include <projectexplorer/taskhub.h>
 
 #include <utils/styledbar.h>
+#include <utils/utilsicons.h>
 
 #include "OptionsPage.h"
 
@@ -74,6 +76,7 @@ bool DocmalaPlugin::initialize(const QStringList &arguments, QString *errorStrin
     _renderThread.start();
     _renderTimer.moveToThread(&_renderThread);
     _renderTimer.setSingleShot(true);
+    _renderTimer.setInterval(100);
     connect( &_renderTimer, &QTimer::timeout, this, &DocmalaPlugin::render, Qt::DirectConnection);
 
     _settings.load(Core::ICore::settings());
@@ -119,6 +122,8 @@ bool DocmalaPlugin::initialize(const QStringList &arguments, QString *errorStrin
     return true;
 }
 
+#include <QDebug>
+
 void DocmalaPlugin::extensionsInitialized()
 {
     // Retrieve objects from the plugin manager's object pool
@@ -137,12 +142,66 @@ void DocmalaPlugin::extensionsInitialized()
         m_toolBarLayout->setSpacing(0);
 
         m_toolBarLayout->addStretch();
+
+        auto m_closeAction = new QAction(Utils::Icons::CLOSE_TOOLBAR.icon(), QString(), toolBar);
+        auto m_linkAction = new QAction(Utils::Icons::LINK.icon(), QString(), toolBar);
+        auto highlightAction = new QAction(Utils::Icons::EYE_OPEN_TOOLBAR.icon(), QString(), toolBar);
+
+        m_linkAction->setCheckable(true);
+        m_linkAction->setChecked(_previewFollowCursor);
+        highlightAction->setCheckable(true);
+        highlightAction->setChecked(_previewHighlightLine);
+
+        auto m_closeBtn = new QToolButton();
+        auto linkButton = new QToolButton();
+        auto highlightButton = new QToolButton();
+        //linkButton->setCheckable(true);
+
+        m_closeBtn->setDefaultAction(m_closeAction);
+        linkButton->setDefaultAction(m_linkAction);
+        highlightButton->setDefaultAction(highlightAction);
+
+        connect(m_closeAction, &QAction::triggered,
+                [this]() {
+            _showPreviewPane = false;
+            showPreview(_showPreviewPane);
+        });
+
+        connect(m_linkAction, &QAction::toggled, [this](bool toggled) {
+            _previewFollowCursor = toggled;
+            updateHighLight();
+        });
+
+        connect(highlightAction, &QAction::toggled, [this](bool toggled) {
+            _previewHighlightLine = toggled;
+            updateHighLight();
+        });
+
+        m_toolBarLayout->addWidget(linkButton);
+        m_toolBarLayout->addWidget(highlightButton);
+        m_toolBarLayout->addSpacing(32);
+        m_toolBarLayout->addWidget(m_closeBtn);
+
         layout->addWidget(toolBar);
 
         _preview = new QWebEngineView (nullptr);
         _preview->setPage (new QWebEnginePage());
-        connect(_preview->page(), &QWebEnginePage::loadStarted, [this] {_pageIsLoaded = false;});
-        connect(_preview->page(), &QWebEnginePage::loadFinished, [this] {_pageIsLoaded = true;});
+        connect(_preview->page(), &QWebEnginePage::loadStarted, [this] {
+            qDebug() << "Load Started";
+            _pageIsLoaded = false;
+        });
+        connect(_preview->page(), &QWebEnginePage::loadFinished, [this] {
+            _pageIsLoaded = true;
+            _preview->page()->view()->setUpdatesEnabled(true);
+            _preview->page()->view()->update();
+            qDebug() << "Load Finished";
+        });
+        connect(_preview->page(), &QWebEnginePage::scrollPositionChanged, [this](const QPointF &position) {
+            if( !position.isNull() )
+                _scrollPosition = position;
+            qDebug() << "Scroll Position changed " << position;
+        });
+
         _preview->setStyleSheet (QStringLiteral ("QWebEngineView {background: #FFFFFF;}"));
 
         layout->addWidget(_preview);
@@ -197,6 +256,7 @@ void DocmalaPlugin::updatePreview()
     QMutexLocker locker(&_renderDataMutex);
     _renderContent = _document->contents();
     _renderFileName = _document->filePath().toString();
+    _renderScrollPosition = _scrollPosition;
     auto editor = TextEditor::BaseTextEditor::currentTextEditor();
     if( editor ) {
         _renderCurrentLine = editor->editorWidget()->textCursor().blockNumber()+1;
@@ -216,10 +276,14 @@ void DocmalaPlugin::updateHighLight()
     if( editor ) {
         if( _previewHighlightLine ) {
            _preview->page()->runJavaScript(QString("highlightLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+        } else {
+            _preview->page()->runJavaScript("highlightLine(-1);");
         }
 
         if( _previewFollowCursor ) {
             _preview->page()->runJavaScript(QString("scrollToLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
+        } else {
+            _preview->page()->runJavaScript(QString("window.scrollTo(0, ") + QString::number(_scrollPosition.ry()) + ");");
         }
     }
 }
@@ -272,6 +336,8 @@ void DocmalaPlugin::render()
     scripts += "function editCurrentLine() { " "\n";
     if( _renderPreviewFollowCursor && _renderCurrentLine != -1 ) {
         scripts += "scrollToLine("+std::to_string(_renderCurrentLine)+");" "\n";
+    } else {
+        scripts += "window.scrollTo(0, " + std::to_string(_renderScrollPosition.ry()) + ");" "\n";
     }
     if( _renderPreviewHighlightLine && _renderCurrentLine != -1 ) {
         scripts += "highlightLine("+std::to_string(_renderCurrentLine)+");" "\n";
@@ -318,6 +384,7 @@ void DocmalaPlugin::showPreview(bool show)
 void DocmalaPlugin::renderingFinished()
 {
     QMutexLocker locker(&_renderDataMutex);
+    _preview->page()->view()->setUpdatesEnabled(true);
     _preview->page()->setHtml( _renderRenderedHTML, QUrl() );
      ProjectExplorer::TaskHub::clearTasks(Constants::DOCMALA_TASK_ID);
     for( auto error : _renderOccuredErrors ) {

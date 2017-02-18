@@ -269,7 +269,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
 
 }
 
-std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string scripts)
+std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string &scripts)
 {
     std::string outputFileName = "outfile.html";
 

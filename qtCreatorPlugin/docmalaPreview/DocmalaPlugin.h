@@ -57,6 +57,7 @@ private:
     QScopedPointer<Docmala> _docmala;
     QMetaObject::Connection _documentChangedConnection;
     bool _pageIsLoaded = false;
+    QPointF _scrollPosition;
     QThread _renderThread;
     QTimer _renderTimer;
     QMutex _renderDataMutex;
@@ -68,6 +69,7 @@ private:
     bool _renderPreviewFollowCursor = true;
     bool _renderPreviewHighlightLine = true;
     std::vector<docmala::Error> _renderOccuredErrors;
+    QPointF _renderScrollPosition;
     bool _previewFollowCursor = true;
     bool _previewHighlightLine = true;
 };
