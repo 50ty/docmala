@@ -380,7 +380,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
         if( isFormatSpecifier(c) ) {
             const char previous = _file->previous();
             const char following = _file->following();
-            if( (isWhitespace(previous) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
+            if( (isWhitespace(previous, true) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
                 auto store = formatedText;
                 bool ok = false;
                 switch(c) {
