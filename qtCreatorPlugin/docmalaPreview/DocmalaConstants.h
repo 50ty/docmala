@@ -7,6 +7,8 @@ const char Docmala_ID[] = "Docmala.Editor";
 const char Docmala_MENU_ID[] = "Docmala.Preview";
 const char SETTINGS_GROUP[] = "DocmalaPlugin";
 const char DOCMALA_DIR[] = "installDir";
+const char HIGHLIGHT_CURRENT_LINE[] = "highlightCurrentLine";
+const char FOLLOW_CURSOR[] = "followCursor";
 
 const char DOCMALA_TASK_ID[] = "ProjectExplorer.Docmala.Errors";
 

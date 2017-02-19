@@ -1,22 +1,13 @@
 #pragma once
 
-#include <QtWebEngineWidgets/QWebEngineView>
-
 #include "Docmala_global.h"
+#include "PreviewPage.h"
+#include "PreviewPane.h"
+#include "Renderer.h"
 #include "Settings.h"
-#include <docmala/Error.h>
-#include <docmala/HtmlOutput.h>
 
 #include <extensionsystem/iplugin.h>
-#include <texteditor/texteditor.h>
 #include <coreplugin/idocument.h>
-
-#include <QThread>
-#include <QTimer>
-#include <QMutex>
-#include <QtWebSockets/QWebSocketServer>
-#include <QtWebSockets/QWebSocket>
-
 
 namespace docmala {
 class Docmala;
@@ -46,39 +37,20 @@ private:
     void createOptionsPage();
     void settingsChanged();
 
+    void currentEditorChanged();
     void documentChanged();
     void updatePreview();
-    void updateHighLight();
-
-    void render();
-
+    void updateHighlight();
 
     QWebEngineView* _preview = nullptr;
-    QWidget* _previewPane = nullptr;
-    bool _showPreviewPane = false;
-    Settings _settings;
-    Core::IDocument* _document;
-    QScopedPointer<Docmala> _docmala;
-    QMetaObject::Connection _documentChangedConnection;
-    bool _pageIsLoaded = false;
-    QPointF _scrollPosition;
-    QThread _renderThread;
-    QTimer _renderTimer;
-    QMutex _renderDataMutex;
-    QByteArray _renderContent;
-    QString _renderFileName;
-    std::string _renderLastFileName;
-    HtmlOutput::HtmlDocument _renderRenderedHTML;
-    QWebSocketServer* _webSocketServer = nullptr;
-    QWebSocket* _webSocket = nullptr;
+    PreviewPane* _previewPane = nullptr;
+    PreviewPage* _previewPage = nullptr;
+    Renderer* _renderer = nullptr;
 
-    int _renderCurrentLine = -1;
-    bool _renderPreviewFollowCursor = true;
-    bool _renderPreviewHighlightLine = true;
-    std::vector<docmala::Error> _renderOccuredErrors;
-    QPointF _renderScrollPosition;
-    bool _previewFollowCursor = true;
-    bool _previewHighlightLine = true;
+    Settings _settings;
+    bool _paneWasVisible = false;
+    Core::IDocument* _document = nullptr;
+    QMetaObject::Connection _documentChangedConnection;
 };
 
 } // namespace Internal

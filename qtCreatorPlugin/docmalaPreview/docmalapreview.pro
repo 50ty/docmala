@@ -8,7 +8,10 @@ SOURCES += \
     DocmalaPlugin.cpp \
     OptionsPage.cpp \
     Settings.cpp \
-    OptionsDialog.cpp
+    OptionsDialog.cpp \
+    PreviewPane.cpp \
+    PreviewPage.cpp \
+    Renderer.cpp
 
 HEADERS += \
     DocmalaPlugin.h \
@@ -16,7 +19,10 @@ HEADERS += \
     Docmala_global.h \
     OptionsPage.h \
     Settings.h \
-    OptionsDialog.h
+    OptionsDialog.h \
+    PreviewPane.h \
+    PreviewPage.h \
+    Renderer.h
 
 LIBS += -L"$$_PRO_FILE_PWD_/ext/lib/" -llibDocmala -lhtmlOutputPlugin
 INCLUDEPATH += "$$_PRO_FILE_PWD_/ext/include/"
