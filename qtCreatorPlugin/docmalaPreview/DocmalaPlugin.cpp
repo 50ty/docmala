@@ -264,7 +264,6 @@ void DocmalaPlugin::updatePreview()
 
 void DocmalaPlugin::updateHighLight()
 {
-    return;
     if( !_pageIsLoaded )
         return;
     auto editor = TextEditor::BaseTextEditor::currentTextEditor();
@@ -277,8 +276,6 @@ void DocmalaPlugin::updateHighLight()
 
         if( _previewFollowCursor ) {
             _preview->page()->runJavaScript(QString("scrollToLine(") + QString::number(editor->editorWidget()->textCursor().blockNumber()+1) + ")");
-        } else {
-            _preview->page()->runJavaScript(QString("window.scrollTo(0, ") + QString::number(_scrollPosition.ry()) + ");");
         }
     }
 }
@@ -306,59 +303,8 @@ void DocmalaPlugin::render()
     parameters.insert(std::make_pair("embedImages", Parameter{"embedImages", "", FileLocation() } ));
     parameters.insert(std::make_pair("pluginDir", Parameter{"pluginDir", _docmala->pluginDir(), FileLocation()} ) );
 
-//    std::string scripts = "var lastStyle;" "\n"
-//                          "var lastElement = null;" "\n"
-//    "function highlightLine(line) { " "\n"
-//    "    if( lastElement ) lastElement.style = lastStyle;" "\n"
-//    "    var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
-//    "    if( myElement ) {" "\n"
-//    "        lastStyle = myElement.style;" "\n"
-//    "        myElement.style.border = \"2px solid grey\";" "\n"
-//    "        myElement.style.borderRadius = \"6px\";" "\n"
-//    "        myElement.style.background = \"lightgrey\";" "\n"
-//    "    }" "\n"
-//    "    lastElement = myElement;" "\n"
-//    "}" "\n"
-//    "function scrollToLine(line) { " "\n"
-//    "    var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
-//    "    if( myElement ) {" "\n"
-//    "        const elementRect = myElement.getBoundingClientRect();" "\n"
-//    "        const absoluteElementTop = elementRect.top + window.pageYOffset;" "\n"
-//    "        const middle = absoluteElementTop - (window.innerHeight / 2);" "\n"
-//    "        window.scrollTo(0, middle);" "\n"
-//    "    }" "\n"
-//    "    lastElement = myElement;" "\n"
-//    "}" "\n";
-
-//    scripts += "function editCurrentLine() { " "\n";
-//    if( _renderPreviewFollowCursor && _renderCurrentLine != -1 ) {
-//        scripts += "scrollToLine("+std::to_string(_renderCurrentLine)+");" "\n";
-//    } else {
-//        scripts += "window.scrollTo(0, " + std::to_string(_renderScrollPosition.ry()) + ");" "\n";
-//    }
-//    if( _renderPreviewHighlightLine && _renderCurrentLine != -1 ) {
-//        scripts += "highlightLine("+std::to_string(_renderCurrentLine)+");" "\n";
-//    }
-//    scripts += "}" "\n";
-
-//    scripts +=
-//    "if (window.addEventListener)" "\n"
-//    "    window.addEventListener(\"load\", editCurrentLine, false);" "\n"
-//    "else if (window.attachEvent)" "\n"
-//    "    window.attachEvent(\"onload\", editCurrentLine);" "\n"
-//    "else window.onload = editCurrentLine;" "\n"
-//    ;
-
-//    head << "<!doctype html>" << std::endl;
-//    head << "<html>" << std::endl;
-//    head << "<head>" << std::endl;
-
     auto html = htmlOutput.produceHtml(parameters, _docmala->document(), "" );//scripts));
 
-//    QFile f("/home/michael/test.html");
-//    f.open(QIODevice::WriteOnly);
-//    f.write(html.toLatin1());
-//    f.close();
     {
         QMutexLocker locker(&_renderDataMutex);
         _renderRenderedHTML = html;
@@ -406,21 +352,45 @@ void DocmalaPlugin::renderingFinished()
         document += QString::fromStdString(_renderRenderedHTML.head) + "</head>";
 
         document += "<body>" "\n"
-          "<div id=\"placeholder\"></div>" "\n"
-          "<script>" "\n"
-          "  'use strict';" "\n"
-          "  var placeholder = document.getElementById('placeholder');" "\n"
-
-          "  var updateText = function(message) {" "\n"
-          "      placeholder.innerHTML = message.data;" "\n"
-          "      var blocks = placeholder.querySelectorAll('pre code');" "\n"
-          "      var ArrayProto = [];" "\n"
-          "      ArrayProto.forEach.call(blocks, hljs.highlightBlock);" "\n"
-          "  }" "\n"
-          "  var webSocket = new WebSocket(\"ws://localhost:"+ QString::number(_webSocketServer->serverPort())+"\");" "\n"
-          "  webSocket.onmessage = updateText;"
-          "</script>" "\n"
-        "</body>" "\n";
+                    "  <div id=\"placeholder\"></div>" "\n"
+                    "  <script>" "\n"
+                    "    'use strict';" "\n"
+                    "    var placeholder = document.getElementById('placeholder');" "\n"
+                    "    var lastStyle;" "\n"
+                    "    var lastElement = null;" "\n"
+                    "    var lastLine = -1;" "\n"
+                    "    function highlightLine(line) { " "\n"
+                    "      lastLine = line;" "\n"
+                    "      if( lastElement ) lastElement.style = lastStyle;" "\n"
+                    "      var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
+                    "      if( myElement ) {" "\n"
+                    "        lastStyle = myElement.style;" "\n"
+                    "        myElement.style.border = \"2px solid grey\";" "\n"
+                    "        myElement.style.borderRadius = \"6px\";" "\n"
+                    "        myElement.style.background = \"lightgrey\";" "\n"
+                    "      }" "\n"
+                    "      lastElement = myElement;" "\n"
+                    "    }" "\n"
+                    "    function scrollToLine(line) { " "\n"
+                    "      var myElement = document.querySelector(\"#line_\"+line.toString());" "\n"
+                    "      if( myElement ) {" "\n"
+                    "        const elementRect = myElement.getBoundingClientRect();" "\n"
+                    "        const absoluteElementTop = elementRect.top + window.pageYOffset;" "\n"
+                    "        const middle = absoluteElementTop - (window.innerHeight / 2);" "\n"
+                    "        window.scrollTo(0, middle);" "\n"
+                    "      }" "\n"
+                    "    }" "\n"
+                    "    var updateText = function(message) {" "\n"
+                    "      placeholder.innerHTML = message.data;" "\n"
+                    "      var blocks = placeholder.querySelectorAll('pre code');" "\n"
+                    "      var ArrayProto = [];" "\n"
+                    "      ArrayProto.forEach.call(blocks, hljs.highlightBlock);" "\n"
+                    "      highlightLine(lastLine);" "\n"
+                    "    }" "\n"
+                    "    var webSocket = new WebSocket(\"ws://localhost:"+ QString::number(_webSocketServer->serverPort())+"\");" "\n"
+                    "    webSocket.onmessage = updateText;"
+                    "  </script>" "\n"
+                    "</body>" "\n";
 
         QFile f("/home/michael/test.txt");
         f.open(QIODevice::WriteOnly);
