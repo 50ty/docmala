@@ -5,6 +5,7 @@
 #include "Docmala_global.h"
 #include "Settings.h"
 #include <docmala/Error.h>
+#include <docmala/HtmlOutput.h>
 
 #include <extensionsystem/iplugin.h>
 #include <texteditor/texteditor.h>
@@ -13,6 +14,9 @@
 #include <QThread>
 #include <QTimer>
 #include <QMutex>
+#include <QtWebSockets/QWebSocketServer>
+#include <QtWebSockets/QWebSocket>
+
 
 namespace docmala {
 class Docmala;
@@ -64,7 +68,10 @@ private:
     QByteArray _renderContent;
     QString _renderFileName;
     std::string _renderLastFileName;
-    QString _renderRenderedHTML;
+    HtmlOutput::HtmlDocument _renderRenderedHTML;
+    QWebSocketServer* _webSocketServer = nullptr;
+    QWebSocket* _webSocket = nullptr;
+
     int _renderCurrentLine = -1;
     bool _renderPreviewFollowCursor = true;
     bool _renderPreviewHighlightLine = true;

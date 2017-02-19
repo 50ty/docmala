@@ -79,7 +79,17 @@ public:
 
         if( outFile.is_open() ) {
             HtmlOutput output;
-            outFile << output.produceHtml(parameters, document);
+            auto html = output.produceHtml(parameters, document);
+
+            outFile << "<!doctype html>" << std::endl;
+            outFile << "<html>" << std::endl;
+            outFile << "<head>" << std::endl;
+            outFile << html.head << std::endl;
+            outFile << "</head>" << std::endl;
+
+            outFile << "<body>" << std::endl;
+            outFile << html.body << std::endl;
+            outFile << "</body>" << std::endl;
             return true;
         }
         return false;
@@ -144,6 +154,24 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, 
     if( !isGenerated ) {
         outFile << "</span>" << std::endl;
     }
+}
+
+void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
+{
+    if( !code->type.empty() ) {
+        outFile << "<pre"<<id(code)<<"> <code class=\""<<code->type<<"\">" << std::endl;
+    } else {
+        outFile << "<pre> <code>" << std::endl;
+    }
+
+    std::string cde = code->code;
+
+    replaceAll(cde, "<", "&lt;");
+    replaceAll(cde, ">", "&gt;");
+
+    outFile << cde << std::endl;
+    outFile << "</code> </pre>" << std::endl;
+
 }
 
 void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0)
@@ -277,13 +305,8 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
         case DocumentPart::Type::Code: {
             auto code = part->code();
 
-            if( !code->type.empty() ) {
-                outFile << "<pre"<<id(code)<<"> <code class=\""<<code->type<<"\">" << std::endl;
-            } else {
-                outFile << "<pre> <code>" << std::endl;
-            }
-            outFile << code->code << std::endl;
-            outFile << "</code> </pre>" << std::endl;
+            writeCode(outFile, code);
+            break;
         }
         default:
             break;
@@ -298,7 +321,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
 
 }
 
-std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string &scripts)
+HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters, const Document &document, const std::string &scripts)
 {
     std::string outputFileName = "outfile.html";
 
@@ -343,54 +366,34 @@ std::string HtmlOutput::produceHtml(const ParameterList &parameters, const Docum
         cssReader.close();
     }
 
-    std::stringstream outFile;
+    HtmlDocument html;
+
+    std::stringstream head;
+    std::stringstream body;
 
 
-    outFile << "<!doctype html>" << std::endl;
-    outFile << "<html>" << std::endl;
-    outFile << "<head>" << std::endl;
-    outFile << "<meta charset=\"utf-8\">" << std::endl;
-    outFile << "<title>No title yet</title>" << std::endl;
+    head << "<meta charset=\"utf-8\">" << std::endl;
+    head << "<title>No title yet</title>" << std::endl;
 
-    outFile << "<style>" << std::endl;
-    outFile << "ul.dash { list-style-type: none; }" << std::endl;
+    head << "<style>" << std::endl;
+    head << "ul.dash { list-style-type: none; }" << std::endl;
+    head << "ul.dash li:before { content: '-'; position: absolute; margin-left: -15px; }" << std::endl;
+    head << codeHighlightCSS << std::endl;
+    head << "</style>" << std::endl;
 
-    outFile << "ul.dash li:before { content: '-'; position: absolute; margin-left: -15px; }" << std::endl;
+    head << "<script>" << std::endl;
+    head << scripts << std::endl;
+    head << "</script>" << std::endl;
+    head << "<script>" << std::endl;
+    head << codeHighlightScript << std::endl;
+    head << "</script>" << std::endl;
+    head << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
 
-    outFile << codeHighlightCSS << std::endl;
-    outFile << "</style>" << std::endl;
+    writeDocumentParts(body, parameters, document, document.parts() );
 
-    outFile << "<script>" << std::endl;
-
-    outFile << scripts << std::endl;
-    outFile << "</script>" << std::endl;
-    //outFile << "<script src=\""<< pluginDir << "/htmlOutputPluginCodeHighlight.js" <<"\">" << std::endl;
-    outFile << "<script>" << std::endl;
-//    outFile << "//<![CDATA[" << std::endl;
-    outFile << codeHighlightScript << std::endl;
-//    outFile << "//]]>" << std::endl;
-    outFile << "</script>" << std::endl;
-
-    outFile << "<script>"
-               "function initCodeHighlight() { hljs.initHighlightingOnLoad(); }" "\n"
-               "if (window.addEventListener)" "\n"
-               "    window.addEventListener(\"load\", initCodeHighlight, false);" "\n"
-               "else if (window.attachEvent)" "\n"
-               "    window.attachEvent(\"onload\", initCodeHighlight);" "\n"
-               "else window.onload = initCodeHighlight;" "\n"
-               "</script>"
-    ;
-    outFile << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
-    outFile << "</head>" << std::endl;
-    outFile << "<body>" << std::endl;
-    outFile << "" << std::endl;
-    outFile << "" << std::endl;
-
-    outFile << "</body>" << std::endl;
-
-    writeDocumentParts(outFile, parameters, document, document.parts() );
-
-    return outFile.str();
+    html.head = head.str();
+    html.body = body.str();
+    return html;
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::OutputPlugin, HtmlOutputPlugin, "html", 1, "Write document to a HTML file", EXTENSION_SYSTEM_NO_USER_DATA )

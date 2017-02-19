@@ -2,7 +2,7 @@ DEFINES += Docmala_LIBRARY
 
 # Docmala files
 
-QT += webenginewidgets
+QT += webenginewidgets websockets
 
 SOURCES += \
     DocmalaPlugin.cpp \
