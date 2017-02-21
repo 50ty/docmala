@@ -361,6 +361,99 @@ bool Docmala::readAnchor()
     return false;
 }
 
+bool Docmala::readLink()
+{
+    enum class Mode {
+        Begin,
+        Data,
+        Text,
+        EndTag1,
+        EndTag2
+    } mode { Mode::Begin };
+
+    std::string text;
+    std::string data;
+    auto linkLocation = _file->location();
+
+    while( !_file->isEoF() ) {
+        auto location = _file->location();
+        char c = _file->getch();
+
+        if( mode == Mode::Begin ) {
+            if( c == '<' ) {
+                mode = Mode::Data;
+                continue;
+            } else {
+                _errors.push_back(Error{ location, std::string("Expected '<' but got '") + c + "'. This is an error in libDocmala." });
+                return false;
+            }
+        } else if( mode == Mode::Data ) {
+            if( isWhitespace(c) && data.empty() ) {
+                continue;
+            } else if( c == ',' ) {
+                mode = Mode::Text;
+                continue;
+            } else if( c == '>' ) {
+                mode = Mode::EndTag1;
+                continue;
+            } else if( isWhitespace(c) && !data.empty() ) {
+                mode = Mode::EndTag2;
+                continue;
+            } else {
+                data.push_back(c);
+            }
+        } else if( mode == Mode::Text ) {
+            if( c == '>' ) {
+                if( text.empty() ) {
+                    _errors.push_back(Error{_file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty.") });
+                }
+                mode = Mode::EndTag1;
+                continue;
+            } else if( c == '\n' ) {
+                _errors.push_back(Error{_file->location(), std::string("Error while parsing link. A end tag '>>' was expected but a 'newline' was found.") });
+                return false;
+            } else {
+                text.push_back(c);
+            }
+        } else if( mode == Mode::EndTag1 ) {
+            if( c != '>' ) {
+                _errors.push_back(Error{ location, std::string("Error while parsing link. Expected '>' but got '") + c + "'." });
+                return false;
+            } else {
+                auto type = DocumentPart::Link::Type::IntraFile;
+
+                if( data.find("://") != std::string::npos ) {
+                    type = DocumentPart::Link::Type::Web;
+                } else if(data.find(":") != std::string::npos ) {
+                    type = DocumentPart::Link::Type::InterFile;
+                }
+
+                if( data.empty() ) {
+                    _errors.push_back(Error{linkLocation, std::string("Error while parsing link. Link data is not allowed to be empty.") });
+                    return false;
+                }
+
+                _document.addPart( DocumentPart::Link{data, text, type, linkLocation} );
+                return true;
+            }
+        } else if( mode == Mode::EndTag2 ) {
+            if( isWhitespace(c) ) {
+                continue;
+            } else if( c == '>' ) {
+                mode = Mode::EndTag1;
+                continue;
+            } else {
+                _errors.push_back(Error{ location, std::string("Error while parsing anchor. Expected '>' but got '") + c + "'." });
+                return false;
+            }
+        }
+    }
+
+    _errors.push_back(Error{ _file->location(), std::string("Error while parsing anchor. Unexpected end of file." ) } );
+    return false;
+
+}
+
 bool isFormatSpecifier(char c)
 {
     return c == '_' || c == '*' || c == '-';
@@ -455,6 +548,11 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
             if( !formatedText.text.empty() )
                 text.text.push_back(formatedText);
             readAnchor();
+            formatedText.text.clear();
+        } else if( c == '<' && _file->following() == '<' ) {
+            if( !formatedText.text.empty() )
+                text.text.push_back(formatedText);
+            readLink();
             formatedText.text.clear();
         } else {
             formatedText.text.push_back(c);

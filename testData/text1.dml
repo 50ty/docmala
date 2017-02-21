@@ -1,7 +1,20 @@
-= Headline level 1 ...
-     blubb
+= Headline1 [[ref1]]
 
-.Diagramm mit schönem Bildchen
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr,
+sed diam nonumy eirmod tempor invidunt ut labore et dolore
+magna aliquyam erat, sed diam voluptua. At vero eos et accusam
+et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea
+takimata sanctus est Lorem ipsum dolor sit amet.
+
+== Level 2
+
+_Lorem_ *ipsum* -dolor- sit amet, consetetur sadipscing elitr,
+sed diam nonumy eirmod tempor invidunt ut -labore- *et* _dolore_
+magna aliquyam erat, sed diam voluptua. At vero eos _*et accusam*_
+et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea
+takimata sanctus est Lorem ipsum dolor sit amet.
+
+.Title of diagram
 [plantuml]
 ----
 User << Human >>
@@ -14,22 +27,55 @@ User -> (Use)
 
 MySql -> (Use)
 ----
-     
-Hallo Ana, hier ist text :)     
 
-[plantuml]
-----
-class Ballsport
-class Volleyball
+=== Level 3
 
-Volleyball -> Ballsport
-----
+Lorem ipsum dolor sit.
 
-== Headline level 2
+==== Level 4
 
-Text text text :)
-mehr text :)
+Lorem ipsum dolor sit
+
+===== Level 5
+
+Lorem ipsum dolor sitLorem ipsum dolor sit
+
+====== Level 6
+Lorem ipsum dolor sitLorem ipsum dolor sitLorem ipsum dolor sit
+See <<ref1, first chapter>> for more information
+Or have a look at <<testInclude.dml:ref2, some other text>> for more information.
+Or go to <<http://google.com, this>> website to find an answer.
+
+
+== Level 2 again
 
 [include, file="testInclude.dml", keepHeadlineLevel]
 
-Text text text
+== And level 2 again
+
+* bullet list
+* next bullet
+** next level
+*** third level
+*** second third bullet
+* next one
+** second
+
+# numbered list
+# next number
+## next level
+### third level
+### second third number
+# next one
+## second
+
+* mixed list
+* next bullet
+## next level
+*** third level
+*** second third bullet
+## next one
+*** third level
+*** second third bullet
+* second
+

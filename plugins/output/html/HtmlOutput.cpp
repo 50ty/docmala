@@ -176,54 +176,42 @@ void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
 
 void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0)
 {
-    for( ; start != document.parts().end(); start++ ) {
-        if( start->type() != DocumentPart::Type::List ) {
-            start--;
-            return;
+    auto list = start->list();
+    if( currentLevel < list->level ) {
+        std::string type = "ul";
+        std::string style;
+        switch( list->type ) {
+        case DocumentPart::List::Type::Points:
+            type = "ul";
+            break;
+        case DocumentPart::List::Type::Dashes:
+            type = "ul";
+            style = "class=\"dash\"";
+            break;
+        case DocumentPart::List::Type::Numbered:
+            type = "ol";
+            break;
         }
 
-        // TODO: Currently, mixed lists are not upported, meaning that:
-        // * text
-        // # text 2
-        // will be treated as:
-        // * text
-        // * text 2
-
-        auto list = start->list();
-
-        if( currentLevel == list->level ) {
-            for( auto entry : list->entries ) {
-                outFile << "<li> ";
-                writeText(outFile, &entry, isGenerated);
-                outFile << " </li>" << std::endl;
-            }
-            return;
-        } else if( currentLevel < list->level ) {
-            std::string type = "ul";
-            std::string style;
-            switch( list->type ) {
-            case DocumentPart::List::Type::Points:
-                type = "ul";
-                break;
-            case DocumentPart::List::Type::Dashes:
-                type = "ul";
-                style = "class=\"dash\"";
-                break;
-            case DocumentPart::List::Type::Numbered:
-                type = "ol";
-                break;
-            }
-
-            currentLevel++;
-            outFile << "<" << type << " " << style << ">" << std::endl;
+        currentLevel++;
+        outFile << "<" << type << " " << style << ">" << std::endl;
+        while( true ) {
             writeList(outFile, start, document, isGenerated, currentLevel);
-            outFile << "</" << type << ">" << std::endl;
-            currentLevel--;
-        } else {
-            return;
+            if( start +1 == document.parts().end() || (start+1)->type() != DocumentPart::Type::List || (start+1)->list()->level < currentLevel ) {
+                break;
+            } else {
+                start++;
+            }
+        }
+        outFile << "</" << type << ">" << std::endl;
+        currentLevel--;
+    } else if( currentLevel == list->level ) {
+        for( auto entry : list->entries ) {
+            outFile << "<li> ";
+            writeText(outFile, &entry, isGenerated);
+            outFile << " </li>" << std::endl;
         }
     }
-    start--;
 }
 
 void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterList &parameters, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
@@ -306,6 +294,29 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             auto code = part->code();
 
             writeCode(outFile, code);
+            break;
+        }
+        case DocumentPart::Type::Anchor: {
+            auto anchor = part->anchor();
+            outFile << "<a id=\"" << anchor->name << "\"/>" << std::endl;
+            break;
+        }
+        case DocumentPart::Type::Link: {
+            auto link = part->link();
+            std::string text = link->text;
+            if( text.empty() ) {
+                text = link->data;
+            }
+            if( link->type == DocumentPart::Link::Type::IntraFile ) {
+                outFile << "<a href=\"#" << link->data << "\">" << text << "</a>" << std::endl;
+            } else if( link->type == DocumentPart::Link::Type::InterFile ) {
+                std::string data = link->data;
+                data[data.find(":")] = '#';
+                outFile << "<a href=\"" << data << "\">" << text << "</a>" << std::endl;
+            } else if( link->type == DocumentPart::Link::Type::Web ) {
+                outFile << "<a href=\"" << link->data << "\">" << text << "</a>" << std::endl;
+            }
+
             break;
         }
         default:

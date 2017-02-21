@@ -1,5 +1,10 @@
+t ..
+z ....
+u ...
+tt
 = Include Test
 
+.includiert
 [plantuml]
 ----
 User << Human >>
@@ -14,6 +19,9 @@ MySql -> (Use)
      
 Hallo Ana, hier ist eingefügter text :)
 
+some Unicode text òàèé€§
+
+.Balla balla
 [plantuml]
 ----
 class Ballsport

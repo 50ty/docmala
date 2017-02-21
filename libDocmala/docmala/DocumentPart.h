@@ -21,6 +21,7 @@ public:
         Caption,
         List,
         Anchor,
+        Link,
         GeneratedDocument,
         Code
     };
@@ -39,6 +40,19 @@ public:
 
     struct Anchor {
         std::string name;
+        FileLocation location;
+    };
+
+    struct Link {
+        enum class Type {
+            Web,
+            IntraFile,
+            InterFile
+        };
+
+        std::string data;
+        std::string text;
+        Type type;
         FileLocation location;
     };
 
@@ -156,6 +170,11 @@ public:
         , _data( anchor )
     { }
 
+    DocumentPart( const Link &link )
+        : _type( Type::Link )
+        , _data( link )
+    { }
+
     DocumentPart( const GeneratedDocument &generated )
         : _type( Type::GeneratedDocument )
         , _data( generated )
@@ -196,6 +215,10 @@ public:
         return boost::get<Anchor>(&_data);
     }
 
+    const Link* link() const {
+        return boost::get<Link>(&_data);
+    }
+
     const GeneratedDocument* generatedDocument() const {
         return boost::get<GeneratedDocument>(&_data);
     }
@@ -216,7 +239,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List, Anchor, GeneratedDocument, Code> _data;
+    boost::variant<Text, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code> _data;
 };
 
 }
