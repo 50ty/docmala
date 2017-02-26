@@ -12,6 +12,7 @@ void Settings::save() const
     settings->setValue(QLatin1String(docmala::Constants::DOCMALA_DIR), _docmalaInstallDir.absolutePath());
     settings->setValue(QLatin1String(docmala::Constants::HIGHLIGHT_CURRENT_LINE), _highlightCurrentLine);
     settings->setValue(QLatin1String(docmala::Constants::FOLLOW_CURSOR), _followCursor);
+    settings->setValue(QLatin1String(docmala::Constants::ZOOM), _zoom);
 
     settings->endGroup();
     settings->sync();
@@ -26,6 +27,7 @@ void Settings::load()
 
     _highlightCurrentLine = settings->value(QLatin1String(docmala::Constants::HIGHLIGHT_CURRENT_LINE), true).toBool();
     _followCursor = settings->value(QLatin1String(docmala::Constants::FOLLOW_CURSOR), true).toBool();
+    _zoom = settings->value(QLatin1String(docmala::Constants::ZOOM), 1.0).toDouble();
     settings->endGroup();
 }
 
@@ -57,4 +59,14 @@ bool Settings::followCursor() const
 void Settings::setFollowCursor(bool followCursor)
 {
     _followCursor = followCursor;
+}
+
+double Settings::zoom() const
+{
+    return _zoom;
+}
+
+void Settings::setZoom(double zoom)
+{
+    _zoom = zoom;
 }

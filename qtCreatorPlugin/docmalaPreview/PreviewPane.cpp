@@ -3,8 +3,11 @@
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWebEngineView>
-//#include <QIcon>
+#include <QtMath>
 #include <QAction>
+#include <QWheelEvent>
+#include <QComboBox>
+#include <QDoubleSpinBox>
 
 #include <utils/styledbar.h>
 #include <utils/utilsicons.h>
@@ -28,6 +31,19 @@ PreviewPane::PreviewPane(Settings *settings, QWidget *parent)
 void PreviewPane::setPage(QWebEnginePage *page)
 {
     _preview->setPage(page);
+    _preview->setZoomFactor(_settings->zoom());
+    //page->setZoomFactor(_settings->zoom());
+}
+
+void PreviewPane::wheelEvent(QWheelEvent *event)
+{
+    if( event->modifiers() & Qt::CTRL ) {
+        double factor = event->angleDelta().ry() / 360.0;
+        factor = qPow(2, factor);
+
+        setZoomFactor( factor * _preview->zoomFactor() );
+        _zoomComboBox->setCurrentText( QString::number(static_cast<int>(_preview->zoomFactor() * 100)) + " %");
+    }
 }
 
 void PreviewPane::addToolBar(QLayout *layout)
@@ -70,8 +86,49 @@ void PreviewPane::addToolBar(QLayout *layout)
     linkButton->setDefaultAction(linkAction);
     highlightButton->setDefaultAction(highlightAction);
 
+    _zoomComboBox = new QComboBox();
+    _zoomComboBox->addItem("50 %");
+    _zoomComboBox->addItem("75 %");
+    _zoomComboBox->addItem("100 %");
+    _zoomComboBox->addItem("150 %");
+    _zoomComboBox->addItem("200 %");
+    _zoomComboBox->addItem("300 %");
+    _zoomComboBox->addItem("400 %");
+    _zoomComboBox->addItem("500 %");
+    _zoomComboBox->setEditable(true);
+
+    connect(_zoomComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int index) {
+        switch (index) {
+        case 0: setZoomFactor(0.5);
+            break;
+        case 1: setZoomFactor(0.75);
+            break;
+        case 2: setZoomFactor(1.0);
+            break;
+        case 3: setZoomFactor(1.5);
+            break;
+        case 4: setZoomFactor(2.0);
+            break;
+        case 5: setZoomFactor(3.0);
+            break;
+        case 6: setZoomFactor(4.0);
+            break;
+        case 7: setZoomFactor(5.0);
+            break;
+        }
+    });
+
+    connect(_zoomComboBox, &QComboBox::editTextChanged, [this](QString text){
+        bool ok = false;
+        int zoom = text.toInt(&ok);
+        if( ok ) {
+            setZoomFactor(zoom / 100.0);
+        }
+    });
     toolBarLayout->addWidget(linkButton);
     toolBarLayout->addWidget(highlightButton);
+    toolBarLayout->addSpacing(10);
+    toolBarLayout->addWidget(_zoomComboBox);
     toolBarLayout->addStretch();
     toolBarLayout->addWidget(closeButton);
 
@@ -82,16 +139,15 @@ void PreviewPane::addToolBar(QLayout *layout)
 void PreviewPane::addPreview(QLayout *layout)
 {
     _preview = new QWebEngineView(nullptr);
-//    preview->setPage (new QWebEnginePage());
-//    connect(preview->page(), &QWebEnginePage::loadStarted, [this] {
-//    });
-//    connect(preview->page(), &QWebEnginePage::loadFinished, [this] {
-//        emit previewReady();
-//    });
-
-//    preview->setStyleSheet (QStringLiteral ("QWebEngineView {background: #FFFFFF;}"));
-
     layout->addWidget(_preview);
+    _preview->setZoomFactor(_settings->zoom());
+    _zoomComboBox->setCurrentText( QString::number(static_cast<int>(_preview->zoomFactor() * 100)) + " %");
+}
+
+void PreviewPane::setZoomFactor(double zoom)
+{
+    _preview->setZoomFactor(zoom);
+    _settings->setZoom(zoom);
 }
 
 

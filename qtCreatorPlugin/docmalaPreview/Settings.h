@@ -20,8 +20,12 @@ public:
     bool followCursor() const;
     void setFollowCursor(bool followCursor);
 
+    double zoom() const;
+    void setZoom(double zoom);
+
 private:
     QDir _docmalaInstallDir;
-    bool _highlightCurrentLine;
-    bool _followCursor;
+    bool _highlightCurrentLine = true;
+    bool _followCursor = true;
+    double _zoom = 1;
 };

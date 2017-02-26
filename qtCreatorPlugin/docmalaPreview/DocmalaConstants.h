@@ -9,6 +9,7 @@ const char SETTINGS_GROUP[] = "DocmalaPlugin";
 const char DOCMALA_DIR[] = "installDir";
 const char HIGHLIGHT_CURRENT_LINE[] = "highlightCurrentLine";
 const char FOLLOW_CURSOR[] = "followCursor";
+const char ZOOM[] = "zoom";
 
 const char DOCMALA_TASK_ID[] = "ProjectExplorer.Docmala.Errors";
 

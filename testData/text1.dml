@@ -43,6 +43,7 @@ Lorem ipsum dolor sitLorem ipsum dolor sit
 ====== Level 6
 Lorem ipsum dolor sitLorem ipsum dolor sitLorem ipsum dolor sit
 See <<ref1, first chapter>> for more information
+Or have a look at <<testInclude.dml:testAnchor, some other text>> for more information.
 Or have a look at <<testInclude.dml:ref2, some other text>> for more information.
 Or go to <<http://google.com, this>> website to find an answer.
 

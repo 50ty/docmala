@@ -2,6 +2,7 @@
 #include <QWebEnginePage>
 #include <QWebEngineView>
 #include <QWidget>
+#include <QComboBox>
 
 #include "Settings.h"
 
@@ -21,12 +22,17 @@ signals:
     void followCursorChanged(bool followCursor);
     void highlightCurrentLineChanged(bool highlightCurrentLine);
 
+protected:
+    void wheelEvent(QWheelEvent *event) override;
+
 private:
     void addToolBar(QLayout *layout);
     void addPreview(QLayout *layout);
+    void setZoomFactor(double zoom);
 
     Settings* _settings;
     QWebEngineView* _preview;
+    QComboBox* _zoomComboBox;
 };
 
 } /*Internal*/

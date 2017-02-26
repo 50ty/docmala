@@ -2,7 +2,7 @@ t ..
 z ....
 u ...
 tt
-= Include Test
+= Include Test [[testAnchor]]
 
 .includiert
 [plantuml]
@@ -30,7 +30,7 @@ class Volleyball
 Volleyball -> Ballsport
 ----
 
-== Headline level 2
+== Headline level 2 [[ref2]]
 
 Text text text :)
 mehr text :)
