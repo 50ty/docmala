@@ -1,6 +1,7 @@
 #include <extension_system/Extension.hpp>
 #include <docmala/DocmaPlugin.h>
 #include <docmala/Docmala.h>
+#include <algorithm>
 
 using namespace docmala;
 
@@ -9,9 +10,18 @@ class IncludePlugin : public DocumentPlugin {
 public:
     BlockProcessing blockProcessing() const override;
     bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
+
+    PostProcessing postProcessing() const override;
+    bool postProcess(const ParameterList &parameters, const FileLocation &location, Document &document) override;
+
     std::vector<Error> errors() const {
         return _errors;
     }
+
+    void escapeFileName(std::string &fileName) {
+        std::replace( fileName.begin(), fileName.end(), '.', '_');
+    }
+
     std::vector<Error> _errors;
     std::unique_ptr<Docmala> parser;
 };
@@ -85,7 +95,10 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
             DocumentPart::Headline headline = *part.headline();
             headline.level += baseLevel;
             generated.document.push_back(headline);
-
+        } else if( part.type() == DocumentPart::Type::Anchor) {
+            auto anchor = *part.anchor();
+            anchor.name = includeFile + ":" + anchor.name;
+            generated.document.push_back(anchor);
         } else {
             generated.document.push_back(part);
         }
@@ -93,6 +106,52 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
 
     document.addPart(generated);
 
+    return true;
+}
+
+DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const
+{
+    return PostProcessing::Once;
+}
+
+bool IncludePlugin::postProcess(const ParameterList &parameters, const FileLocation &location, Document &document)
+{
+    std::string includeFile;
+    std::string inputFile;
+
+    auto inFileIter = parameters.find("inputFile");
+    if( inFileIter != parameters.end() ) {
+        inputFile = inFileIter->second.value;
+    } else {
+        _errors.push_back({location, "Parameter 'inputFile' is missing."});
+        return false;
+    }
+
+    std::string baseDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
+
+    auto includeFileIter = parameters.find("file");
+
+    if( includeFileIter != parameters.end() ) {
+        includeFile = includeFileIter->second.value;
+    } else {
+        _errors.push_back({location, "Parameter 'file' is missing."});
+        return false;
+    }
+
+
+
+    for( auto &part : document.parts() ) {
+        if( part.type() == DocumentPart::Type::Link ) {
+            auto link = part.link();
+
+            if( link->type == DocumentPart::Link::Type::InterFile ) {
+                std::string fileName = link->data.substr(0, link->data.find(":"));
+                if( fileName == includeFile ) {
+                    link->type = DocumentPart::Link::Type::IntraFile;
+                }
+            }
+        }
+    }
     return true;
 }
 

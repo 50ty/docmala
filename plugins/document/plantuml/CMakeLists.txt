@@ -11,7 +11,7 @@ add_custom_command(
         TARGET PlantUMLPlugin POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy
                 ${CMAKE_CURRENT_SOURCE_DIR}/plantuml.jar
-                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plantuml.jar )
+                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/plantuml.jar )
 
 set_target_properties(PlantUMLPlugin PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")

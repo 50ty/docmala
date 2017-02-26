@@ -79,6 +79,7 @@ bool Docmala::parse()
 {
     _document.clear();
     _errors.clear();
+    _registeredPostprocessing.clear();
 
     if( !_file->isOpen() ) {
         _errors.push_back(Error{FileLocation(), "Unable to open file '" + _file->fileName() + "'." });
@@ -143,7 +144,40 @@ bool Docmala::parse()
             }
         }
     }
+    doPostprocessing();
+    checkConsistency();
     return true;
+}
+
+void Docmala::doPostprocessing()
+{
+    bool documentChanged = true;
+    while(documentChanged) {
+        documentChanged = false;
+        for( auto &post : _registeredPostprocessing ) {
+            if( post.plugin->postProcessing() == DocumentPlugin::PostProcessing::DocumentChanged
+                    || post.processed == false ) {
+                if( post.plugin->postProcess(post.parameters, post.location, _document) ) {
+                    documentChanged = true;
+                }
+                post.processed = true;
+            }
+        }
+    }
+}
+
+void Docmala::checkConsistency()
+{
+    for( const auto &part : _document.parts() ) {
+        if( part.type() == DocumentPart::Type::Link ) {
+            auto link = part.link();
+            if( link->type == DocumentPart::Link::Type::IntraFile ) {
+                if( _document.anchors().find(link->data) == _document.anchors().end() ) {
+                    _errors.push_back({ link->location, "Unable to find anchor for link to: '" + link->data + "'." });
+                }
+            }
+        }
+    }
 }
 
 bool Docmala::readHeadLine()
@@ -269,6 +303,10 @@ bool Docmala::readPlugin()
         _errors.push_back(Error{nameBegin, std::string("Unable to load plugin with name: '") + name + "'." });
         return false;
     } else {
+        if( plugin->postProcessing() != DocumentPlugin::PostProcessing::None ) {
+            _registeredPostprocessing.push_back({plugin, parameters, nameBegin});
+        }
+
         if( plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Required ||
                 plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Optional ) {
             std::string block;

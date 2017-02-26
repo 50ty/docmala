@@ -46,6 +46,8 @@ namespace docmala {
         }
     private:
         bool parse();
+        void doPostprocessing();
+        void checkConsistency();
 
         bool readHeadLine();
         bool readCaption();
@@ -72,6 +74,15 @@ namespace docmala {
         std::unique_ptr<extension_system::ExtensionSystem> _pluginLoader;
         std::string _outputDir;
         std::map<std::string, std::shared_ptr<DocumentPlugin>> _loadedDocumentPlugins;
+
+        struct PostProcessingInfo {
+            std::shared_ptr<DocumentPlugin> plugin;
+            ParameterList parameters;
+            FileLocation location;
+            bool processed = false;
+        };
+
+        std::vector<PostProcessingInfo> _registeredPostprocessing;
         std::string _pluginDir;
     };
 }

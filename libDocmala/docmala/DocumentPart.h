@@ -219,6 +219,10 @@ public:
         return boost::get<Link>(&_data);
     }
 
+    Link* link() {
+        return boost::get<Link>(&_data);
+    }
+
     const GeneratedDocument* generatedDocument() const {
         return boost::get<GeneratedDocument>(&_data);
     }

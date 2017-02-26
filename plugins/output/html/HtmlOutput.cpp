@@ -54,6 +54,12 @@ std::string base64_encode(const std::string& inputData) {
     return ret;
 }
 
+std::string escapeAnchor( const std::string anchor ) {
+    std::string escape = anchor;
+    std::replace( escape.begin(), escape.end(), '.', 'd');
+    std::replace( escape.begin(), escape.end(), ':', 'c');
+    return escape;
+}
 
 using namespace docmala;
 
@@ -298,7 +304,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
         }
         case DocumentPart::Type::Anchor: {
             auto anchor = part->anchor();
-            outFile << "<a id=\"" << anchor->name << "\"/>" << std::endl;
+            outFile << "<a id=\"" << escapeAnchor(anchor->name) << "\"/>" << std::endl;
             break;
         }
         case DocumentPart::Type::Link: {
@@ -308,7 +314,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
                 text = link->data;
             }
             if( link->type == DocumentPart::Link::Type::IntraFile ) {
-                outFile << "<a href=\"#" << link->data << "\">" << text << "</a>" << std::endl;
+                outFile << "<a href=\"#" << escapeAnchor(link->data) << "\">" << text << "</a>" << std::endl;
             } else if( link->type == DocumentPart::Link::Type::InterFile ) {
                 std::string data = link->data;
                 data[data.find(":")] = '#';

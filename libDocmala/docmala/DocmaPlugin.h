@@ -16,9 +16,35 @@ namespace docmala {
             Optional
         };
 
+        enum class PostProcessing {
+            None, ///< No preprocessing is requested
+            Once, ///< Preprocessing is done once
+            DocumentChanged ///< Preprocessing is done when the document changed
+        };
+
         virtual ~DocumentPlugin();
         virtual BlockProcessing blockProcessing() const { return BlockProcessing::No; }
         virtual bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block = "" ) = 0;
+
+        /**
+         * @brief Returns the post processing mode, a plugin requests
+         * @return Requested post processing mode
+         */
+        virtual PostProcessing postProcessing() const { return PostProcessing::None; }
+
+        /**
+         * @brief postProcess will be called by docmala, when the whole document has been processed.
+         *          The postprocess function may change the document's content. If the document has been changed, the
+         *          function returns true.
+         * @param document
+         * @return true, if the document has been changed by post processing, false otherwise
+         */
+        virtual bool postProcess(const ParameterList &parameters, const FileLocation &location, Document &document) {
+            (void)parameters;
+            (void)location;
+            (void)document;
+            return true;
+        }
     };
     DocumentPlugin::~DocumentPlugin() {}
 

@@ -7,10 +7,15 @@ add_library(htmlOutputPlugin SHARED
                 "HtmlOutput.cpp")
 
 add_custom_command(
-        TARGET htmlOutputPlugin POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-                ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js
-                ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/htmlOutputPluginCodeHighlight.js )
+    TARGET htmlOutputPlugin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/htmlOutputPluginCodeHighlight.js )
+add_custom_command(
+    TARGET htmlOutputPlugin POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.css
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/htmlOutputPluginCodeHighlight.css )
 
 target_link_libraries(htmlOutputPlugin libDocmala)
 
