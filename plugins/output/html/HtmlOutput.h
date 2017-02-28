@@ -25,6 +25,8 @@ namespace docmala {
                                 const std::vector<DocumentPart> &documentParts,
                                 bool isGenerated = false);
 
+        void writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const ParameterList &parameters, const Document &document);
+
 
         unsigned int _imageCounter = 1;
         unsigned int _figureCounter = 1;

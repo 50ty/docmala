@@ -1,0 +1,17 @@
+table {
+    border-collapse: collapse;
+}
+
+table, th, td {
+    border: 1px solid black;
+}
+
+ul.dash { 
+    list-style-type: none; 
+}
+
+ul.dash li:before { 
+    content: '-'; 
+    position: absolute; 
+    margin-left: -15px;     
+}

@@ -36,6 +36,61 @@ Lorem ipsum dolor sit.
 
 Lorem ipsum dolor sit
 
+===== table:
+
+[table]
+----
+headline | col 1 | col 2 | next
+row 1    | 1     | 2     | 3
+row 2    | 2     | 4     | 6
+row 3    | 3     | 6     | 9
+----
+
+===== table with headers:
+
+[table]
+----
+headline || col 1 | col 2 | next
+================================
+row 1    || 1     | 2     | 3
+row 2    || 2     | 4     | 6
+row 3    || 3     | 6     | 9
+----
+
+===== table with column span:
+
+[table]
+----
+headline || col 1 | col 2 | next
+================================
+row 1    || 1     | 2     | 3
+row 2    ||+1 2           | 6
+row 3    || 3     | 6     | 9
+----
+
+===== table with row span:
+
+[table]
+----
+headline || col 1 | col 2 | next
+================================
+row 1    || 1     |+0:1 2 | 3
+row 2    || 2             | 6
+row 3    || 3     | 6     | 9
+----
+
+===== table with row and column span:
+
+[table]
+----
+headline || col 1 | col 2 | next
+================================
+row 1    ||+1:1    2      | 3
+row 2    ||                 4
+row 3    || 3     | 6     | 9
+----
+
+
 ===== Level 5
 
 Lorem ipsum dolor sitLorem ipsum dolor sit

@@ -23,7 +23,8 @@ public:
         Anchor,
         Link,
         GeneratedDocument,
-        Code
+        Code,
+        Table
     };
 
     struct VisualElement {
@@ -36,6 +37,20 @@ public:
     struct KeyValuePair {
         std::string key;
         std::string value;
+    };
+
+    struct Table {
+        int columns;
+        int rows;
+
+        struct Cell {
+            std::vector<DocumentPart> content;
+            int columnSpan = 0;
+            int rowSpan = 0;
+            bool isHeading = false;
+        };
+
+        std::vector< std::vector<Cell> > cells;
     };
 
     struct Anchor {
@@ -185,6 +200,11 @@ public:
         , _data( code )
     { }
 
+    DocumentPart( const Table &table )
+        : _type( Type::Table )
+        , _data( table )
+    { }
+
     Type type() const { return _type; }
 
     const Text* text() const {
@@ -231,6 +251,10 @@ public:
         return boost::get<Code>(&_data);
     }
 
+    const Table* table() const {
+        return boost::get<Table>(&_data);
+    }
+
 private:
     template< class T >
     DocumentPart(Type type, const T &data)
@@ -243,7 +267,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code> _data;
+    boost::variant<Text, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code, Table> _data;
 };
 
 }

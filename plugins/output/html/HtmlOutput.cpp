@@ -180,6 +180,44 @@ void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
 
 }
 
+
+void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const ParameterList &parameters, const Document &document)
+{
+    outFile << "<table>" << std::endl;
+    bool firstRow = true;
+    for( const auto &row : table->cells ) {
+        bool firstColumn = true;
+        outFile << "<tr>" << std::endl;
+        std::string end;
+
+        for( const auto &cell : row ) {
+            std::string span;
+            if( cell.columnSpan > 1 ) {
+                span = " colspan=\"" + std::to_string(cell.columnSpan) + "\"";
+            }
+            if( cell.rowSpan > 1 ) {
+                span += " rowspan=\"" + std::to_string(cell.rowSpan) + "\"";
+            }
+            if( cell.isHeading && firstRow ) {
+                outFile << "<th scope=\"col\""+span+">" << std::endl;
+                end = "</th>";
+            } else if( cell.isHeading && firstColumn ) {
+                outFile << "<th scope=\"row\""+span+">" << std::endl;
+                end = "</th>";
+            } else {
+                outFile << "<td"+span+">" << std::endl;
+                end = "</td>";
+            }
+
+            writeDocumentParts(outFile, parameters, document, cell.content, true);
+            firstColumn = false;
+        }
+        outFile << "</tr>" << std::endl;
+        firstRow = false;
+    }
+    outFile << "</table>" << std::endl;
+}
+
 void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0)
 {
     auto list = start->list();
@@ -325,6 +363,10 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
 
             break;
         }
+        case DocumentPart::Type::Table: {
+            writeTable(outFile, part->table(), parameters, document);
+            break;
+        }
         default:
             break;
         }
@@ -358,6 +400,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
 
     std::string codeHighlightScript;
     std::string codeHighlightCSS;
+    std::string generalCSS;
 
     std::ifstream highlightReader(pluginDir + "/htmlOutputPluginCodeHighlight.js", std::ios::in | std::ios::binary);
     if (highlightReader)
@@ -373,14 +416,24 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     }
 
 
-    std::ifstream cssReader(pluginDir + "/htmlOutputPluginCodeHighlight.css", std::ios::in | std::ios::binary);
-    if (cssReader)
+    std::ifstream codeHighlightReader(pluginDir + "/htmlOutputPluginDefaultStyle.css", std::ios::in | std::ios::binary);
+    if (codeHighlightReader)
     {
-        cssReader.seekg(0, std::ios::end);
-        codeHighlightCSS.resize( static_cast<std::string::size_type>(cssReader.tellg()));
-        cssReader.seekg(0, std::ios::beg);
-        cssReader.read(&codeHighlightCSS[0], static_cast<std::streamsize>(codeHighlightCSS.size()));
-        cssReader.close();
+        codeHighlightReader.seekg(0, std::ios::end);
+        codeHighlightCSS.resize( static_cast<std::string::size_type>(codeHighlightReader.tellg()));
+        codeHighlightReader.seekg(0, std::ios::beg);
+        codeHighlightReader.read(&codeHighlightCSS[0], static_cast<std::streamsize>(codeHighlightCSS.size()));
+        codeHighlightReader.close();
+    }
+
+    std::ifstream generalCSSReader(pluginDir + "/htmlOutputPluginCodeHighlight.css", std::ios::in | std::ios::binary);
+    if (generalCSSReader)
+    {
+        generalCSSReader.seekg(0, std::ios::end);
+        generalCSS.resize( static_cast<std::string::size_type>(generalCSSReader.tellg()));
+        generalCSSReader.seekg(0, std::ios::beg);
+        generalCSSReader.read(&generalCSS[0], static_cast<std::streamsize>(generalCSS.size()));
+        generalCSSReader.close();
     }
 
     HtmlDocument html;
@@ -393,9 +446,8 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     head << "<title>No title yet</title>" << std::endl;
 
     head << "<style>" << std::endl;
-    head << "ul.dash { list-style-type: none; }" << std::endl;
-    head << "ul.dash li:before { content: '-'; position: absolute; margin-left: -15px; }" << std::endl;
     head << codeHighlightCSS << std::endl;
+    head << generalCSS << std::endl;
     head << "</style>" << std::endl;
 
     head << "<script>" << std::endl;
