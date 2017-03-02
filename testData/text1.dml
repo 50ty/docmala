@@ -1,3 +1,14 @@
+
+{title=Test Document}
+
+{toc}
+{author + Alice}
+{author + Bob Bobbinger}
+
+{test = one}
+{test = two}
+
+
 = Headline1 [[ref1]]
 
 Lorem ipsum dolor sit amet, consetetur sadipscing elitr,

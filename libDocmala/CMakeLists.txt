@@ -10,6 +10,7 @@ set( LIBDOCMALA_PUBLIC_HEADERS
                 "docmala/Parameter.h"
                 "docmala/DocumentPart.h"
                 "docmala/Error.h"
+                "docmala/MetaData.h"
                 "docmala/Document.h")
 
 add_library(libDocmala SHARED

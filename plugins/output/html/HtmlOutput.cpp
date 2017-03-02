@@ -443,7 +443,11 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
 
 
     head << "<meta charset=\"utf-8\">" << std::endl;
-    head << "<title>No title yet</title>" << std::endl;
+    if( document.metaData().find("title") != document.metaData().end() ) {
+        head << "<title>"+document.metaData().at("title").data.front().value+"</title>" << std::endl;
+    } else {
+        head << "<title>[No title]</title>" << std::endl;
+    }
 
     head << "<style>" << std::endl;
     head << codeHighlightCSS << std::endl;

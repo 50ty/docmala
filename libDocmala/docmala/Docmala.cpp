@@ -2,6 +2,7 @@
 #include "DocmaPlugin.h"
 #include "File.h"
 
+
 #include <extension_system/ExtensionSystem.hpp>
 
 using namespace docmala;
@@ -110,6 +111,9 @@ bool Docmala::parse()
                 break;
             case '.':
                 readCaption();
+                break;
+            case '{':
+                readMetaData();
                 break;
             case '[':
                 if( _file->following() == '[' ) {
@@ -490,6 +494,117 @@ bool Docmala::readLink()
     _errors.push_back(Error{ _file->location(), std::string("Error while parsing anchor. Unexpected end of file." ) } );
     return false;
 
+}
+
+bool Docmala::readMetaData()
+{
+    enum class Mode {
+        ParameterName,
+        EndOrAssign,
+        ParameterValue,
+        SkipUntilNewLine
+    } mode {Mode::ParameterName};
+
+    MetaData metaData;
+    bool skipWarningPrinted = false;
+    bool addMetaData = true;
+    bool ok = true;
+    auto loc = _file->location();
+
+    while( !_file->isEoF() ) {
+        char c = _file->getch();
+        if( mode == Mode::ParameterName ) {
+            if( c == ' ' || c == '\t' )  {
+                if( metaData.key.empty() ) { // skip leading white spaces
+                    continue;
+                } else {
+                    mode = Mode::EndOrAssign;
+                    continue;
+                }
+            } else if( (c >= 'a' && c <= 'z') ||
+                       (c >= 'A' && c <= 'Z') ||
+                       (c >= '0' && c <= '9') ||
+                       c == '_' || c == '-' ) {
+                metaData.key.push_back(c);
+            } else if( c == '=' || c == '+' ) {
+                if( metaData.key.empty() ) {
+                    _errors.push_back(Error{_file->location(), std::string("Error while parsing meta data key. A key consisting of ['a'-'z', 'A'-'Z', '0'-'9', '_', '-'] was expected but a '") + c +"' was found." });
+                    return false;
+                } else {
+                    mode = Mode::EndOrAssign;
+                }
+            } else if (c == '}') {
+                mode = Mode::EndOrAssign;
+            } else {
+                _errors.push_back(Error{_file->location(), std::string("Error while parsing meta data key. A valid meta data key consisting of [a'-'z', 'A'-'Z', '0'-'9', '_', '-'] was expected but a '") + c +"' was found." });
+                return false;
+            }
+        }
+        if( mode == Mode::EndOrAssign ) {
+            if( c == ' ' || c == '\t' )  {
+               continue;
+            }
+
+            if( c == '+' ) {
+               metaData.mode = MetaData::Mode::List;
+            } else if( c == '=' ) {
+                metaData.mode = MetaData::Mode::First;
+            } else if( c == '}' ) {
+                metaData.mode = MetaData::Mode::Flag;
+                metaData.data.push_back({loc, ""});
+                mode = Mode::SkipUntilNewLine;
+                continue;
+            }
+            mode = Mode::ParameterValue;
+            continue;
+        }
+        if( mode == Mode::ParameterValue ) {
+            if( (c == ' ' || c == '\t') && metaData.data.empty() )  {
+               continue;
+            } else if( c == '}' ) {
+                if( metaData.data.empty() ) {
+                    _errors.push_back({_file->location(), std::string("A value was expected but '") + c + "' was found." });
+                    return false;
+                }
+                mode = Mode::SkipUntilNewLine;
+                continue;
+            } else {
+                if( metaData.data.empty() ) {
+                    metaData.data.push_back({loc, ""});
+                }
+                metaData.data.front().value.push_back(c);
+            }
+        }
+        if( mode == Mode::SkipUntilNewLine ) {
+            if( addMetaData ) {
+                addMetaData = false;
+                const auto &current = _document.metaData().find(metaData.key);
+                if( current == _document.metaData().end() ) {
+                    _document.addMetaData(metaData);
+                } else {
+                    if( current->second.mode != metaData.mode ) {
+                        ok = false;
+                        auto loc = current->second.firstLocation;
+                        ErrorData ext = {current->second.data.front().location, std::string("First definition of '") + metaData.key + "' is at " +
+                                         loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
+                        _errors.push_back({_file->location(), std::string("Assignment mode of metadata does not match first definition"), {ext} });
+                    } else {
+                        _document.addMetaData(metaData);
+                    }
+                }
+            }
+            if( c == '\n' ) {
+                return ok;
+            } else {
+                if( !skipWarningPrinted ) {
+                    _errors.push_back(Error{_file->location(), std::string("Text found after '}' is skipped.") });
+                    skipWarningPrinted = true;
+                }
+            }
+        }
+    }
+    _errors.push_back(Error{ _file->location(), std::string("Error while parsing meta data. Unexpected end of file." ) } );
+    return false;
 }
 
 bool isFormatSpecifier(char c)

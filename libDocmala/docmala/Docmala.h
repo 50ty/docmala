@@ -55,6 +55,7 @@ namespace docmala {
         bool readPlugin();
         bool readAnchor();
         bool readLink();
+        bool readMetaData();
         bool readText(char startCharacter, DocumentPart::Text &text);
 
         bool readParameterList(ParameterList &parameters, char blockEnd);

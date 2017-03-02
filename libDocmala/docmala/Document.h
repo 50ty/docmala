@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include "DocumentPart.h"
+#include "MetaData.h"
 
 namespace docmala {
 
@@ -20,6 +21,17 @@ namespace docmala {
                 }
             }
         }
+
+        void addMetaData(const MetaData& metaData) {
+            auto &data = _metaData[metaData.key];
+            if( data.mode == MetaData::Mode::None ) {
+                data = metaData;
+                data.firstLocation = metaData.data.front().location;
+            } else if( data.mode == MetaData::Mode::List ) {
+                data.data.push_back(metaData.data.front());
+            }
+        }
+
         void inheritFrom(const Document &other) {
             _anchors = other.anchors();
         }
@@ -48,9 +60,14 @@ namespace docmala {
         const std::map<std::string, DocumentPart::Anchor>& anchors() const {
             return _anchors;
         }
+
+        const std::map<std::string, MetaData>& metaData() const {
+            return _metaData;
+        }
     private:
         std::vector<DocumentPart> _parts;
         std::map<std::string, DocumentPart::Anchor> _anchors;
+        std::map<std::string, MetaData> _metaData;
     };
 
 }
