@@ -22,6 +22,8 @@ public:
         std::replace( fileName.begin(), fileName.end(), '.', '_');
     }
 
+    const std::vector<Error> lastErrors() const override {return _errors;}
+
     std::vector<Error> _errors;
     std::unique_ptr<Docmala> parser;
 };
@@ -34,8 +36,8 @@ DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
 bool IncludePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
     (void)block;
-    (void)location;
-    (void)document;
+
+    _errors.clear();
 
     std::string pluginDir = "./plugins";
     auto pluginDirIter = parameters.find("pluginDir");
@@ -76,6 +78,7 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
 
     parser->parseFile(baseDir + "/" + includeFile);
 
+    _errors = parser->errors();
     auto doc = parser->document();
     int baseLevel = 1;
     DocumentPart::GeneratedDocument generated(location.line);
@@ -116,6 +119,8 @@ DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const
 
 bool IncludePlugin::postProcess(const ParameterList &parameters, const FileLocation &location, Document &document)
 {
+    _errors.clear();
+
     std::string includeFile;
     std::string inputFile;
 

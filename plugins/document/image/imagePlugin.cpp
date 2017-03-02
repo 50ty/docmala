@@ -12,8 +12,11 @@ public:
     BlockProcessing blockProcessing() const override;
     bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
 
+    const std::vector<Error> lastErrors() const override {return _errors;}
+
     std::vector<Error> _errors;
     std::unordered_map<std::string, DocumentPart::Image> _cache;
+
 };
 
 
@@ -24,9 +27,8 @@ DocumentPlugin::BlockProcessing ImagePlugin::blockProcessing() const {
 bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
     (void)block;
-    (void)location;
-    (void)document;
 
+    _errors.clear();
     std::string inputFile;
 
     auto inFileIter = parameters.find("inputFile");

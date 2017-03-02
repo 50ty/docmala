@@ -163,6 +163,14 @@ void Docmala::doPostprocessing()
                     || post.processed == false ) {
                 if( post.plugin->postProcess(post.parameters, post.location, _document) ) {
                     documentChanged = true;
+                    auto errors = post.plugin->lastErrors();
+                    if( !errors.empty() ) {
+                        for( auto &error : errors ) {
+                            error.message = "    " + error.message;
+                        }
+                        _errors.push_back({post.location, "Errors occured during plugin execution"});
+                        _errors.insert(_errors.end(), errors.begin(), errors.end());
+                    }
                 }
                 post.processed = true;
             }
@@ -318,9 +326,25 @@ bool Docmala::readPlugin()
                 return false;
             } else {
                 plugin->process(parameters, nameBegin, _document, block);
+                auto errors = plugin->lastErrors();
+                if( !errors.empty() ) {
+                    for( auto &error : errors ) {
+                        error.message = "    " + error.message;
+                    }
+                    _errors.push_back({nameBegin, "Errors occured during plugin execution"});
+                    _errors.insert(_errors.end(), errors.begin(), errors.end());
+                }
             }
         } else {
             plugin->process(parameters, nameBegin, _document, "");
+            auto errors = plugin->lastErrors();
+            if( !errors.empty() ) {
+                for( auto &error : errors ) {
+                    error.message = "    " + error.message;
+                }
+                _errors.push_back({nameBegin, "Errors occured during plugin execution"});
+                _errors.insert(_errors.end(), errors.begin(), errors.end());
+            }
         }
     }
 

@@ -6,6 +6,7 @@
 
 #include "Parameter.h"
 #include "Document.h"
+#include "Error.h"
 
 namespace docmala {
     class DocumentPlugin {
@@ -45,6 +46,13 @@ namespace docmala {
             (void)document;
             return true;
         }
+
+        /**
+         * @brief Get the list of errors, occured during the last process or postProcess call
+         * @return List of errors
+         */
+        virtual const std::vector<Error> lastErrors() const {return std::vector<Error>();}
+
     };
     DocumentPlugin::~DocumentPlugin() {}
 

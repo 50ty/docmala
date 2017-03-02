@@ -21,6 +21,8 @@ public:
         SpanModifier
     };
 
+    const std::vector<Error> lastErrors() const override {return _errors;}
+
     ReadCellResult readNextCell(std::string &cellContent);
     std::unique_ptr<MemoryFile> _file;
     std::vector<Error> _errors;
@@ -33,6 +35,7 @@ DocumentPlugin::BlockProcessing TablePlugin::blockProcessing() const {
 
 bool TablePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
 {
+    _errors.clear();
     _file.reset( new MemoryFile(block, location.fileName) );
 
     DocumentPart::Table table;
