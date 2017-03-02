@@ -306,7 +306,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             } else {
                 std::ofstream imgFile;
                 std::stringstream fileName;
-                fileName << _nameBase << "_image_" << _imageCounter << "." << image->format;
+                fileName << _nameBase << "_image_" << _imageCounter << "." << image->fileExtension;
 
                 imgFile.open(fileName.str());
                 imgFile << image->data;

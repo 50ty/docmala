@@ -71,16 +71,17 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
         _errors.push_back({location, "Unable to open file '" + fileName + "'."});
     }
 
+    std::string format = fileExtension;
 
-    if( fileExtension == "svg" ) {
+    if( format == "svg" ) {
         if( imageData.find("<?xml") != std::string::npos ) {
-            fileExtension += "+xml";
+            format += "+xml";
         }
     }
 
     DocumentPart::Text text;
     text.text.push_back({fileName});
-    DocumentPart::Image image(fileExtension, imageData, text);
+    DocumentPart::Image image(format, fileExtension, imageData, text);
     _cache.insert(std::make_pair(block, image));
     document.addPart( image );
 

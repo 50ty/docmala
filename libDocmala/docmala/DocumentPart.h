@@ -143,12 +143,14 @@ public:
 
     struct Image : public Text {
         Image() = default;
-        Image(const std::string& format, const std::string& data, const Text& text)
+        Image(const std::string& format, const std::string& fileExtension, const std::string& data, const Text& text)
             : Text(text)
             , format(format)
+            , fileExtension(fileExtension)
             , data(data)
         {}
         std::string format;
+        std::string fileExtension;
         std::string data;
     };
 
