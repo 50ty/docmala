@@ -106,6 +106,12 @@ row 3    || 3     | 6     | 9
 
 Lorem ipsum dolor sitLorem ipsum dolor sit
 
+. Raster image
+[image,file=test1.png]
+
+. Scalable vector graphic
+[image,file=test1.svg]
+
 ====== Level 6
 Lorem ipsum dolor sitLorem ipsum dolor sitLorem ipsum dolor sit
 See <<ref1, first chapter>> for more information

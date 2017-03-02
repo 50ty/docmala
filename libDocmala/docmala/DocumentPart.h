@@ -83,6 +83,9 @@ public:
 
     struct FormatedText {
         FormatedText() {}
+        FormatedText(const std::string &text)
+            : text(text)
+        {}
 
         std::string text;
         bool bold = false;
