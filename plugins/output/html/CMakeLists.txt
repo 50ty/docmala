@@ -1,6 +1,7 @@
 
 set( HTMLOUTPUTPLUGIN_PUBLIC_HEADERS
-                "HtmlOutput.h" )
+                "HtmlOutput.h"
+                "HtmlOutput_global.h")
 
 add_library(htmlOutputPlugin SHARED
                 ${HTMLOUTPUTPLUGIN_PUBLIC_HEADERS}
@@ -27,7 +28,8 @@ target_link_libraries(htmlOutputPlugin libDocmala)
 
 set_target_properties(htmlOutputPlugin PROPERTIES
     PUBLIC_HEADER "${HTMLOUTPUTPLUGIN_PUBLIC_HEADERS}"
-    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
+    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 install(TARGETS htmlOutputPlugin
         RUNTIME DESTINATION bin

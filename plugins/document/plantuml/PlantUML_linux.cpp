@@ -1,3 +1,5 @@
+#include "DetectOS.h"
+#ifdef CURRENT_OS_LINUX
 #include <extension_system/Extension.hpp>
 #include <docmala/DocmaPlugin.h>
 #include <fstream>
@@ -112,3 +114,4 @@ bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, PlantUMLPlugin, "plantuml", 1, "Creates an uml diagram form the subsequent block", EXTENSION_SYSTEM_NO_USER_DATA )
+#endif

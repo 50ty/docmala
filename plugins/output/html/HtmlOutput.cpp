@@ -261,7 +261,7 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
 void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterList &parameters, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
 {
     bool paragraphOpen = false;
-    auto previous = document.parts().end();
+    std::vector<DocumentPart>::const_iterator previous = document.parts().end();
 
     bool embedImages = parameters.find("embedImages") != parameters.end();
 
@@ -308,12 +308,14 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
                 std::stringstream fileName;
                 fileName << _nameBase << "_image_" << _imageCounter << "." << image->fileExtension;
 
-                imgFile.open(fileName.str());
+                imgFile.open(fileName.str(), std::ofstream::binary | std::ofstream::out);
                 imgFile << image->data;
                 imgFile.close();
                 outFile << "<img src=\"" << fileName.str() <<"\">" << std::endl;
             }
-            if( previous != document.parts().end() && previous->type() == DocumentPart::Type::Caption ) {
+            std::vector<DocumentPart>::const_iterator docEnd = document.parts().end();
+
+            if( /*previous != docEnd && */previous->type() == DocumentPart::Type::Caption ) {
                 outFile << "<figcaption>Figure " << _figureCounter << ": ";
                 writeText(outFile, previous->caption(), isGenerated );
                 outFile << "</figcaption>" << std::endl;

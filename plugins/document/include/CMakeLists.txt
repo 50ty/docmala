@@ -5,9 +5,11 @@ add_library(includePlugin SHARED
 target_link_libraries(includePlugin libDocmala)
 
 set_target_properties(includePlugin PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
+        LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins"
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 install(TARGETS includePlugin 
         LIBRARY DESTINATION bin/plugins
-        ARCHIVE DESTINATION bin/plugins)
+        ARCHIVE DESTINATION bin/plugins
+        RUNTIME DESTINATION bin/plugins)
 

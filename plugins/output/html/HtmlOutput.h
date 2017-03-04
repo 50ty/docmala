@@ -1,5 +1,6 @@
 #pragma once
 
+#include "HtmlOutput_global.h"
 #include <vector>
 #include <string>
 #include <docmala/Document.h>
@@ -7,7 +8,7 @@
 
 namespace docmala {
 
-    class HtmlOutput
+    class HTMLOUTPUT_API HtmlOutput
     {
         // OutputPlugin interface
     public:
