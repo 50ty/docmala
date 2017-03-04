@@ -3,6 +3,7 @@ include_directories("../ext/extension_system/src")
 
 
 set( LIBDOCMALA_PUBLIC_HEADERS
+                "docmala/docmala_global.h"
                 "docmala/Docmala.h"
                 "docmala/DocmaPlugin.h"
                 "docmala/File.h"

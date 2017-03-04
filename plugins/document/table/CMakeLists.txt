@@ -11,4 +11,6 @@ set_target_properties(tablePlugin PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 
-install(TARGETS tablePlugin LIBRARY DESTINATION bin/plugins)
+install(TARGETS tablePlugin 
+        LIBRARY DESTINATION bin/plugins
+        ARCHIVE DESTINATION bin/plugins)

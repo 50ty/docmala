@@ -316,7 +316,11 @@ bool Docmala::readPlugin()
         return false;
     } else {
         if( plugin->postProcessing() != DocumentPlugin::PostProcessing::None ) {
-            _registeredPostprocessing.push_back({plugin, parameters, nameBegin});
+			PostProcessingInfo postProcessing; 
+			postProcessing.plugin = plugin;
+			postProcessing.parameters = parameters;
+			postProcessing.location = nameBegin;
+            _registeredPostprocessing.push_back(postProcessing);
         }
 
         if( plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Required ||

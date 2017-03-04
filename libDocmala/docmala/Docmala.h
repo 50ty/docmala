@@ -6,7 +6,7 @@
 #include <fstream>
 #include <memory>
 
-
+#include "docmala_global.h"
 #include "Parameter.h"
 #include "Document.h"
 #include "Error.h"
@@ -19,7 +19,7 @@ namespace docmala {
     class DocumentPlugin;
     class OutputPlugin;
 
-    class Docmala {
+    class LIBDOCMALA_API Docmala {
     public:
         Docmala(const std::string &pluginDir = "./plugins");
         Docmala(const Document other, const std::string &pluginDir = "./plugins");

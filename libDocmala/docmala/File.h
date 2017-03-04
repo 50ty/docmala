@@ -1,13 +1,13 @@
 #pragma once
 
+#include "docmala_global.h"
 #include <string>
 #include <fstream>
-#include <boost/iostreams/device/mapped_file.hpp>
 #include "FileLocation.h"
 
 namespace docmala {
 
-    class IFile {
+    class LIBDOCMALA_API IFile {
     public:
 
         virtual ~IFile();
@@ -58,7 +58,7 @@ namespace docmala {
 //        boost::iostreams::mapped_file _file;
 //    };
 
-    class MemoryFile : public IFile {
+    class LIBDOCMALA_API MemoryFile : public IFile {
 
 
     public:
@@ -86,7 +86,7 @@ namespace docmala {
 
     };
 
-    class File : public MemoryFile {
+    class LIBDOCMALA_API File : public MemoryFile {
     public:
 
         explicit File( const std::string &fileName );
