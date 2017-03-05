@@ -404,7 +404,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     std::string codeHighlightCSS;
     std::string generalCSS;
 
-    std::ifstream highlightReader(pluginDir + "/htmlOutputPluginCodeHighlight.js", std::ios::in | std::ios::binary);
+    std::ifstream highlightReader(pluginDir + "/outputPluginHtmlCodeHighlight.js", std::ios::in | std::ios::binary);
     if (highlightReader)
     {
         highlightReader.seekg(0, std::ios::end);
@@ -418,7 +418,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     }
 
 
-    std::ifstream codeHighlightReader(pluginDir + "/htmlOutputPluginDefaultStyle.css", std::ios::in | std::ios::binary);
+    std::ifstream codeHighlightReader(pluginDir + "/outputPluginHtmlDefaultStyle.css", std::ios::in | std::ios::binary);
     if (codeHighlightReader)
     {
         codeHighlightReader.seekg(0, std::ios::end);
@@ -428,7 +428,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
         codeHighlightReader.close();
     }
 
-    std::ifstream generalCSSReader(pluginDir + "/htmlOutputPluginCodeHighlight.css", std::ios::in | std::ios::binary);
+    std::ifstream generalCSSReader(pluginDir + "/outputPluginHtmlCodeHighlight.css", std::ios::in | std::ios::binary);
     if (generalCSSReader)
     {
         generalCSSReader.seekg(0, std::ios::end);

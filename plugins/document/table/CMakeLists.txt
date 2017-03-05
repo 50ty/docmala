@@ -2,17 +2,17 @@
 #include_directories("../../ext/extension_system/src")
 
 
-add_library(tablePlugin SHARED
+add_library(documentPluginTable SHARED
                 "tablePlugin.cpp")
                 
-target_link_libraries(tablePlugin libDocmala)
+target_link_libraries(documentPluginTable docmala)
 
-set_target_properties(tablePlugin PROPERTIES
+set_target_properties(documentPluginTable PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 
-install(TARGETS tablePlugin 
-        LIBRARY DESTINATION bin/plugins
-        ARCHIVE DESTINATION bin/plugins
-        RUNTIME DESTINATION bin/plugins)
+install(TARGETS documentPluginTable
+    LIBRARY DESTINATION bin
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin)

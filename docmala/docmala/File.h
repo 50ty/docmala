@@ -7,7 +7,7 @@
 
 namespace docmala {
 
-    class LIBDOCMALA_API IFile {
+    class DOCMALA_API IFile {
     public:
 
         virtual ~IFile();
@@ -58,7 +58,7 @@ namespace docmala {
 //        boost::iostreams::mapped_file _file;
 //    };
 
-    class LIBDOCMALA_API MemoryFile : public IFile {
+    class DOCMALA_API MemoryFile : public IFile {
 
 
     public:
@@ -86,7 +86,7 @@ namespace docmala {
 
     };
 
-    class LIBDOCMALA_API File : public MemoryFile {
+    class DOCMALA_API File : public MemoryFile {
     public:
 
         explicit File( const std::string &fileName );

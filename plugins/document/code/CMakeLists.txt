@@ -2,17 +2,17 @@
 #include_directories("../../ext/extension_system/src")
 
 
-add_library(codePlugin SHARED
+add_library(documentPluginCode SHARED
                 "codePlugin.cpp")
                 
-target_link_libraries(codePlugin libDocmala)
+target_link_libraries(documentPluginCode docmala)
 
-set_target_properties(codePlugin PROPERTIES
+set_target_properties(documentPluginCode PROPERTIES
         LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins"
         RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
 
 
-install(TARGETS codePlugin 
-        LIBRARY DESTINATION bin/plugins
-        ARCHIVE DESTINATION bin/plugins
-        RUNTIME DESTINATION bin/plugins)
+install(TARGETS documentPluginCode
+        LIBRARY DESTINATION bin
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin)

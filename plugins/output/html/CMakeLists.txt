@@ -3,41 +3,43 @@ set( HTMLOUTPUTPLUGIN_PUBLIC_HEADERS
                 "HtmlOutput.h"
                 "HtmlOutput_global.h")
 
-add_library(htmlOutputPlugin SHARED
+add_library(outputPluginHtml SHARED
                 ${HTMLOUTPUTPLUGIN_PUBLIC_HEADERS}
                 "HtmlOutput.cpp")
 
 add_custom_command(
-    TARGET htmlOutputPlugin POST_BUILD
+    TARGET outputPluginHtml POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js
-            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/htmlOutputPluginCodeHighlight.js )
+            ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlCodeHighlight.js
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/outputPluginHtmlCodeHighlight.js )
 add_custom_command(
-    TARGET htmlOutputPlugin POST_BUILD
+    TARGET outputPluginHtml POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.css
-            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/htmlOutputPluginCodeHighlight.css )
+            ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlCodeHighlight.css
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/outputPluginHtmlCodeHighlight.css )
 
 add_custom_command(
-    TARGET htmlOutputPlugin POST_BUILD
+    TARGET outputPluginHtml POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginDefaultStyle.css
-            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/plugins/htmlOutputPluginDefaultStyle.css )
+            ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlDefaultStyle.css
+            ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/outputPluginHtmlDefaultStyle.css )
 
-target_link_libraries(htmlOutputPlugin libDocmala)
+target_link_libraries(outputPluginHtml docmala)
 
-set_target_properties(htmlOutputPlugin PROPERTIES
+set_target_properties(outputPluginHtml PROPERTIES
     PUBLIC_HEADER "${HTMLOUTPUTPLUGIN_PUBLIC_HEADERS}"
-    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins"
-    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin/plugins")
+    LIBRARY_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin"
+    RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin"
+    ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib"
+    )
 
-install(TARGETS htmlOutputPlugin
-        RUNTIME DESTINATION bin
+install(TARGETS outputPluginHtml
         PUBLIC_HEADER DESTINATION include/docmala
         LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib/static)
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin)
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.js
-                ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginCodeHighlight.css
-                ${CMAKE_CURRENT_SOURCE_DIR}/htmlOutputPluginDefaultStyle.css
-    DESTINATION bin/plugins)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlCodeHighlight.js
+                ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlCodeHighlight.css
+                ${CMAKE_CURRENT_SOURCE_DIR}/outputPluginHtmlDefaultStyle.css
+                DESTINATION bin)

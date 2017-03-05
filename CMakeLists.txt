@@ -10,17 +10,17 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 add_subdirectory(ext/extension_system)
 include_directories(ext/extension_system/src)
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(libDocmala)
+include_directories(docmala)
 
 
-add_subdirectory(libDocmala)
+add_subdirectory(docmala)
 add_subdirectory(plugins)
 
 
-add_executable(docmala "main.cpp")
-target_link_libraries(docmala extension_system libDocmala ${Boost_LIBRARIES})
+add_executable(docma "main.cpp")
+target_link_libraries(docma extension_system docmala ${Boost_LIBRARIES})
 
-install(TARGETS docmala
+install(TARGETS docma
         RUNTIME DESTINATION bin
         PUBLIC_HEADER DESTINATION include/docmala
         LIBRARY DESTINATION lib

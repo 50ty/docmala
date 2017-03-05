@@ -376,7 +376,7 @@ bool Docmala::readAnchor()
                 mode = Mode::Name;
                 continue;
             } else {
-                _errors.push_back(Error{ location, std::string("Expected '[' but got '") + c + "'. This is an error in libDocmala." });
+                _errors.push_back(Error{ location, std::string("Expected '[' but got '") + c + "'. This is an error in Docmala." });
                 return false;
             }
         } else if( mode == Mode::Name ) {
@@ -454,7 +454,7 @@ bool Docmala::readLink()
                 mode = Mode::Data;
                 continue;
             } else {
-                _errors.push_back(Error{ location, std::string("Expected '<' but got '") + c + "'. This is an error in libDocmala." });
+                _errors.push_back(Error{ location, std::string("Expected '<' but got '") + c + "'. This is an error in Docmala." });
                 return false;
             }
         } else if( mode == Mode::Data ) {

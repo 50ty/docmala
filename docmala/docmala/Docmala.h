@@ -19,10 +19,10 @@ namespace docmala {
     class DocumentPlugin;
     class OutputPlugin;
 
-    class LIBDOCMALA_API Docmala {
+    class DOCMALA_API Docmala {
     public:
-        Docmala(const std::string &pluginDir = "./plugins");
-        Docmala(const Document other, const std::string &pluginDir = "./plugins");
+        Docmala(const std::string &pluginDir = "./");
+        Docmala(const Document other, const std::string &pluginDir = "./");
         ~Docmala();
 
         bool parseFile(const std::string &fileName);
