@@ -35,7 +35,7 @@ set_target_properties(outputPluginHtml PROPERTIES
 
 install(TARGETS outputPluginHtml
         PUBLIC_HEADER DESTINATION include/docmala
-        LIBRARY DESTINATION lib
+        LIBRARY DESTINATION bin
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin)
 
