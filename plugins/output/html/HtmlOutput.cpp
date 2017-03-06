@@ -192,11 +192,15 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
 
         for( const auto &cell : row ) {
             std::string span;
-            if( cell.columnSpan > 1 ) {
-                span = " colspan=\"" + std::to_string(cell.columnSpan) + "\"";
+            if( cell.isHiddenBySpan ) {
+                continue;
             }
-            if( cell.rowSpan > 1 ) {
-                span += " rowspan=\"" + std::to_string(cell.rowSpan) + "\"";
+
+            if( cell.columnSpan > 0 ) {
+                span = " colspan=\"" + std::to_string(cell.columnSpan+1) + "\"";
+            }
+            if( cell.rowSpan > 0 ) {
+                span += " rowspan=\"" + std::to_string(cell.rowSpan+1) + "\"";
             }
             if( cell.isHeading && firstRow ) {
                 outFile << "<th scope=\"col\""+span+">" << std::endl;
@@ -210,6 +214,8 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
             }
 
             writeDocumentParts(outFile, parameters, document, cell.content, true);
+            outFile << std::endl << end << std::endl;
+
             firstColumn = false;
         }
         outFile << "</tr>" << std::endl;
@@ -394,7 +400,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
         outputFileName = _nameBase + ".html";
     }
 
-    std::string pluginDir;
+    std::string pluginDir = "./";
     auto pluginDirIter = parameters.find("pluginDir");
     if( pluginDirIter != parameters.end() ) {
         pluginDir =  pluginDirIter->second.value + '/';
@@ -404,7 +410,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     std::string codeHighlightCSS;
     std::string generalCSS;
 
-    std::ifstream highlightReader(pluginDir + "/outputPluginHtmlCodeHighlight.js", std::ios::in | std::ios::binary);
+    std::ifstream highlightReader(pluginDir + "outputPluginHtmlCodeHighlight.js", std::ios::in | std::ios::binary);
     if (highlightReader)
     {
         highlightReader.seekg(0, std::ios::end);
@@ -418,7 +424,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     }
 
 
-    std::ifstream codeHighlightReader(pluginDir + "/outputPluginHtmlDefaultStyle.css", std::ios::in | std::ios::binary);
+    std::ifstream codeHighlightReader(pluginDir + "outputPluginHtmlDefaultStyle.css", std::ios::in | std::ios::binary);
     if (codeHighlightReader)
     {
         codeHighlightReader.seekg(0, std::ios::end);
@@ -428,7 +434,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
         codeHighlightReader.close();
     }
 
-    std::ifstream generalCSSReader(pluginDir + "/outputPluginHtmlCodeHighlight.css", std::ios::in | std::ios::binary);
+    std::ifstream generalCSSReader(pluginDir + "outputPluginHtmlCodeHighlight.css", std::ios::in | std::ios::binary);
     if (generalCSSReader)
     {
         generalCSSReader.seekg(0, std::ios::end);

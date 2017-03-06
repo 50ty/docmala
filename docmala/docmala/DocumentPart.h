@@ -40,16 +40,19 @@ public:
     };
 
     struct Table {
-        int columns;
-        int rows;
+        Table() {}
 
         struct Cell {
             std::vector<DocumentPart> content;
-            int columnSpan = 0;
-            int rowSpan = 0;
+
+            size_t columnSpan = 0;
+            size_t rowSpan = 0;
             bool isHeading = false;
+            bool isHiddenBySpan = false;
         };
 
+        size_t columns = 0;
+        size_t rows = 0;
         std::vector< std::vector<Cell> > cells;
     };
 

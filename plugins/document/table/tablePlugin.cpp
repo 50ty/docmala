@@ -26,11 +26,82 @@ public:
     ReadCellResult readNextCell(std::string &cellContent);
     std::unique_ptr<MemoryFile> _file;
     std::vector<Error> _errors;
+
+    void addCell(size_t &currentCol, const size_t currentRow, const DocumentPart::Table::Cell &cell, DocumentPart::Table &table);
+    void ensureTableSize(DocumentPart::Table &table, size_t cols, size_t rows);
+
+    void adjustTableSize(DocumentPart::Table &table);
 };
 
 
 DocumentPlugin::BlockProcessing TablePlugin::blockProcessing() const {
     return BlockProcessing::Optional;
+}
+
+void TablePlugin::ensureTableSize(DocumentPart::Table &table, size_t cols, size_t rows)
+{
+    if( table.columns < cols ) {
+        table.columns = cols;
+        for( auto &row: table.cells ) {
+            row.resize(table.columns, DocumentPart::Table::Cell());
+        }
+    }
+
+    if( table.rows < rows ) {
+        table.rows = rows;
+        while( table.cells.size() < table.rows ) {
+            table.cells.push_back({});
+            table.cells.back().resize(table.columns, DocumentPart::Table::Cell());
+        }
+    }
+}
+
+void TablePlugin::addCell(size_t &currentCol, const size_t currentRow, const DocumentPart::Table::Cell &cell, DocumentPart::Table &table) {
+    ensureTableSize(table, currentCol + cell.columnSpan + 1, currentRow + cell.rowSpan + 1);
+
+    if( table.cells[currentRow][currentCol].isHiddenBySpan ) {
+        auto row = table.cells[currentRow];
+        bool ok = false;
+        for( ; currentCol < row.size(); currentCol++ ) {
+            if( !row[currentCol].isHiddenBySpan ) {
+                ok = true;
+                break;
+            }
+        }
+        if( !ok ) {
+            currentCol += 1;
+            ensureTableSize(table, currentCol + cell.columnSpan + 1, currentRow + cell.rowSpan + 1);
+        }
+    }
+
+    table.cells[currentRow][currentCol] = cell;
+
+    for( auto y = currentRow; y <= currentRow + cell.rowSpan; y++ ) {
+        for( auto x = currentCol; x <= currentCol + cell.columnSpan; x++ ) {
+            if( x == currentCol && y == currentRow ) {
+                continue;
+            }
+            table.cells[y][x].isHiddenBySpan = true;
+        }
+    }
+
+    currentCol += cell.columnSpan + 1;
+}
+
+void TablePlugin::adjustTableSize(DocumentPart::Table &table) {
+    auto cols = table.cells.back().size();
+    // if the current row is longer than the prevously seen ones
+    if( table.columns < cols ) {
+        table.columns = table.columns > cols ? table.columns : cols;
+        if( table.cells.size() != 0 ) {
+            // fill rows with empty cells
+            for( auto &row : table.cells ) {
+                while( row.size() < table.columns ) {
+                    row.push_back(DocumentPart::Table::Cell());
+                }
+            }
+        }
+    }
 }
 
 bool TablePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
@@ -42,6 +113,10 @@ bool TablePlugin::process(const ParameterList &parameters, const FileLocation &l
     table.cells.push_back( std::vector<DocumentPart::Table::Cell>() );
 
     std::string spanModifier;
+    DocumentPart::Table::Cell hiddenCellPrototype;
+    hiddenCellPrototype.isHiddenBySpan = true;
+    size_t currentRow = 0;
+    size_t currentCol = 0;
 
     while (true) {
         std::string cellContent;
@@ -59,19 +134,21 @@ bool TablePlugin::process(const ParameterList &parameters, const FileLocation &l
 
             if( !spanModifier.empty() ) {
                 std::istringstream stream(spanModifier);
-                int colSpan = 0;
+                size_t colSpan = 0;
                 char separator = 0;
-                int rowSpan = 0;
+                size_t rowSpan = 0;
                 stream >> colSpan;
                 stream >> separator;
                 stream >> rowSpan;
 
-                cell.columnSpan = colSpan+1;
-                cell.rowSpan = rowSpan+1;
+                cell.columnSpan = colSpan;
+                cell.rowSpan = rowSpan;
             }
-            table.cells.back().push_back(cell);
+
+            addCell(currentCol, currentRow, cell, table);
         } else if( readCellResult == ReadCellResult::NextRow ) {
-            table.cells.push_back( std::vector<DocumentPart::Table::Cell>() );
+            currentRow++;
+            currentCol = 0;
         } else if( readCellResult == ReadCellResult::HeadlinesAbove ) {
             for( auto &row : table.cells ) {
                 for( auto &cell : row ) {
@@ -79,8 +156,8 @@ bool TablePlugin::process(const ParameterList &parameters, const FileLocation &l
                 }
             }
         } else if( readCellResult == ReadCellResult::RowHeadlinesOnLeft ) {
-            for( auto &cell : table.cells.back() ) {
-                cell.isHeading = true;
+            for( size_t i = 0; i < currentCol; i++ ) {
+                table.cells[currentRow][i].isHeading = true;
             }
         } else if( readCellResult == ReadCellResult::SpanModifier ) {
             spanModifier = cellContent;
