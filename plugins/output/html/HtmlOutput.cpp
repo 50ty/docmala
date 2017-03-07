@@ -290,7 +290,13 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             }
             auto headline = part->headline();
             outFile << "<h" << headline->level << ">";
+            if( !isGenerated ) {
+                outFile << "<span " << id(headline) << ">";
+            }
             writeDocumentParts(outFile, document, headline->text, isGenerated);
+            if( !isGenerated ) {
+                outFile << "</span>" << std::endl;
+            }
             outFile << "</h" << headline->level << ">" << std::endl;
             break;
         }
@@ -340,7 +346,13 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             }
             if( previous->type() == DocumentPart::Type::Caption ) {
                 outFile << "<figcaption>Figure " << _figureCounter << ": ";
+                if( !isGenerated ) {
+                    outFile << "<span " << id(previous->caption()) << ">";
+                }
                 writeDocumentParts(outFile, document, previous->caption()->text, isGenerated );
+                if( !isGenerated ) {
+                    outFile << "</span>" << std::endl;
+                }
                 outFile << "</figcaption>" << std::endl;
                 _figureCounter++;
             }
