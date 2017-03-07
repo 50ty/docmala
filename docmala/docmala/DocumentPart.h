@@ -16,6 +16,7 @@ public:
         Custom,
         Headline,
         Text,
+        FormatedText,
         Paragraph,
         Image,
         Caption,
@@ -106,7 +107,7 @@ public:
     struct Text : public VisualElement {
         Text(int lineNumber = -1) : VisualElement(lineNumber) {}
 
-        std::vector<FormatedText> text;
+        std::vector<DocumentPart> text;
     };
 
     struct Headline : public Text {
@@ -175,6 +176,11 @@ public:
         , _data( text )
     { }
 
+    DocumentPart( const FormatedText &text )
+        : _type( Type::FormatedText )
+        , _data( text )
+    { }
+
     DocumentPart( const Caption &caption )
         : _type( Type::Caption )
         , _data( caption )
@@ -219,6 +225,10 @@ public:
 
     const Text* text() const {
         return boost::get<Text>(&_data);
+    }
+
+    const FormatedText* formatedText() const {
+        return boost::get<FormatedText>(&_data);
     }
 
     const Headline* headline() const {
@@ -277,7 +287,7 @@ private:
     { }
 
     Type _type = Type::Invalid;
-    boost::variant<Text, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code, Table> _data;
+    boost::variant<Text, FormatedText, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code, Table> _data;
 };
 
 }

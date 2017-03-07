@@ -128,52 +128,47 @@ std::string id(const DocumentPart::VisualElement *element)
     return "";
 }
 
-void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, bool isGenerated)
+//void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, bool isGenerated)
+//{
+
+//}
+
+void writeFormatedText(std::stringstream &outFile, const DocumentPart::FormatedText *text)
 {
-    if( !isGenerated ) {
-        outFile << "<span " << id(printText) << ">";
+    if( text->bold ) {
+        outFile << "<b>";
     }
-
-    for( const auto &text : printText->text ) {
-        if( text.bold ) {
-            outFile << "<b>";
-        }
-        if( text.italic ) {
-            outFile << "<i>";
-        }
-        if( text.underlined ) {
-            outFile << "<u>";
-        }
-        if( text.stroked ) {
-            outFile << "<del>";
-        }
-        if( text.monospaced ) {
-            outFile << "<tt>";
-        }
-        outFile << text.text;
-
-        if( text.bold ) {
-            outFile << "</b>";
-        }
-        if( text.italic ) {
-            outFile << "</i>";
-        }
-        if( text.stroked ) {
-            outFile << "</del>";
-        }
-        if( text.monospaced ) {
-            outFile << "</tt>";
-        }
-        if( text.underlined ) {
-            outFile << "</u>";
-        }
-
+    if( text->italic ) {
+        outFile << "<i>";
     }
+    if( text->underlined ) {
+        outFile << "<u>";
+    }
+    if( text->stroked ) {
+        outFile << "<del>";
+    }
+    if( text->monospaced ) {
+        outFile << "<tt>";
+    }
+    outFile << text->text;
 
-    if( !isGenerated ) {
-        outFile << "</span>" << std::endl;
+    if( text->bold ) {
+        outFile << "</b>";
+    }
+    if( text->italic ) {
+        outFile << "</i>";
+    }
+    if( text->stroked ) {
+        outFile << "</del>";
+    }
+    if( text->monospaced ) {
+        outFile << "</tt>";
+    }
+    if( text->underlined ) {
+        outFile << "</u>";
     }
 }
+
 
 void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
 {
@@ -194,7 +189,7 @@ void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
 }
 
 
-void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const ParameterList &parameters, const Document &document)
+void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const Document &document)
 {
     outFile << "<table>" << std::endl;
     bool firstRow = true;
@@ -226,7 +221,7 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
                 end = "</td>";
             }
 
-            writeDocumentParts(outFile, parameters, document, cell.content, true);
+            writeDocumentParts(outFile, document, cell.content, true);
             outFile << std::endl << end << std::endl;
 
             firstColumn = false;
@@ -237,7 +232,7 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
     outFile << "</table>" << std::endl;
 }
 
-void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0)
+void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel)
 {
     auto list = start->list();
     if( currentLevel < list->level ) {
@@ -271,19 +266,16 @@ void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iter
     } else if( currentLevel == list->level ) {
         for( auto entry : list->entries ) {
             outFile << "<li> ";
-            writeText(outFile, &entry, isGenerated);
+            writeDocumentParts(outFile, document, entry.text, isGenerated);
             outFile << " </li>" << std::endl;
         }
     }
 }
 
-void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterList &parameters, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
+void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
 {
     bool paragraphOpen = false;
     std::vector<DocumentPart>::const_iterator previous = document.parts().end();
-
-    bool embedImages = parameters.find("embedImages") != parameters.end();
-
 
     for( std::vector<DocumentPart>::const_iterator part = documentParts.begin(); part != documentParts.end(); part++ ) {
         switch(part->type() ) {
@@ -298,13 +290,27 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             }
             auto headline = part->headline();
             outFile << "<h" << headline->level << ">";
-            writeText(outFile, headline, isGenerated);
+            writeDocumentParts(outFile, document, headline->text, isGenerated);
             outFile << "</h" << headline->level << ">" << std::endl;
+            break;
+        }
+        case DocumentPart::Type::FormatedText: {
+            auto text = part->formatedText();
+            writeFormatedText(outFile, text);
             break;
         }
         case DocumentPart::Type::Text: {
             auto text = part->text();
-            writeText(outFile, text, isGenerated);
+
+            if( !isGenerated ) {
+                outFile << "<span " << id(text) << ">";
+            }
+
+            writeDocumentParts(outFile, document, text->text, isGenerated);
+
+            if( !isGenerated ) {
+                outFile << "</span>" << std::endl;
+            }
             break;
         }
         case DocumentPart::Type::Paragraph:
@@ -318,7 +324,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
         case DocumentPart::Type::Image: {
             auto image = part->image();
             outFile << "<figure"<<id(image)<<">" << std::endl;
-            if( embedImages ) {
+            if( _embedImages ) {
                 outFile << "<img src=\"data:image/" << image->format << ";base64,";
                 outFile << base64_encode( image->data );
                 outFile << "\">";
@@ -332,11 +338,9 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
                 imgFile.close();
                 outFile << "<img src=\"" << fileName.str() <<"\">" << std::endl;
             }
-            std::vector<DocumentPart>::const_iterator docEnd = document.parts().end();
-
-            if( /*previous != docEnd && */previous->type() == DocumentPart::Type::Caption ) {
+            if( previous->type() == DocumentPart::Type::Caption ) {
                 outFile << "<figcaption>Figure " << _figureCounter << ": ";
-                writeText(outFile, previous->caption(), isGenerated );
+                writeDocumentParts(outFile, document, previous->caption()->text, isGenerated );
                 outFile << "</figcaption>" << std::endl;
                 _figureCounter++;
             }
@@ -351,7 +355,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
         case DocumentPart::Type::GeneratedDocument: {
             auto generated = part->generatedDocument();
             outFile << "<div " << id(generated) << ">" << std::endl;
-            writeDocumentParts(outFile, parameters, document, generated->document, true);
+            writeDocumentParts(outFile, document, generated->document, true);
             outFile << "</div>" << std::endl;
             break;
         }
@@ -385,7 +389,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const ParameterL
             break;
         }
         case DocumentPart::Type::Table: {
-            writeTable(outFile, part->table(), parameters, document);
+            writeTable(outFile, part->table(), document);
             break;
         }
         default:
@@ -418,6 +422,8 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     if( pluginDirIter != parameters.end() ) {
         pluginDir =  pluginDirIter->second.value + '/';
     }
+
+    _embedImages = parameters.find("embedImages") != parameters.end();
 
     std::string codeHighlightScript;
     std::string codeHighlightCSS;
@@ -483,7 +489,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     head << "</script>" << std::endl;
     head << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
 
-    writeDocumentParts(body, parameters, document, document.parts() );
+    writeDocumentParts(body, document, document.parts() );
 
     html.head = head.str();
     html.body = body.str();

@@ -131,11 +131,6 @@ bool Docmala::parse()
                     _document.addPart(text);
                 }
                 break;
-            case '<':
-                if( _file->following() == '<'  ) {
-                    readLink();
-                }
-                break;
             case '*':
                 if( isWhitespace(_file->following() ) || _file->following() == '*' ) {
                     readList( DocumentPart::List::Type::Points );
@@ -145,6 +140,7 @@ bool Docmala::parse()
                     _document.addPart(text);
                 }
                 break;
+            case '<':
             default: {
                 DocumentPart::Text text;
                 readText(c, text);
@@ -436,7 +432,7 @@ bool Docmala::readAnchor()
     return false;
 }
 
-bool Docmala::readLink()
+bool Docmala::readLink(DocumentPart::Text &outText)
 {
     enum class Mode {
         Begin,
@@ -508,7 +504,7 @@ bool Docmala::readLink()
                     return false;
                 }
 
-                _document.addPart( DocumentPart::Link{data, text, type, linkLocation} );
+                outText.text.push_back( DocumentPart::Link{data, text, type, linkLocation} );
                 return true;
             }
         } else if( mode == Mode::EndTag2 ) {
@@ -831,7 +827,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
             if( !formatedText.text.empty() ) {
                 text.text.push_back(formatedText);
             }
-            readLink();
+            readLink(text);
             formatedText.text.clear();
         } else {
             formatedText.text.push_back(c);
