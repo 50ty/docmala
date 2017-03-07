@@ -131,6 +131,11 @@ bool Docmala::parse()
                     _document.addPart(text);
                 }
                 break;
+            case '<':
+                if( _file->following() == '<'  ) {
+                    readLink();
+                }
+                break;
             case '*':
                 if( isWhitespace(_file->following() ) || _file->following() == '*' ) {
                     readList( DocumentPart::List::Type::Points );
@@ -637,8 +642,120 @@ bool Docmala::readMetaData()
 
 bool isFormatSpecifier(char c)
 {
-    return c == '_' || c == '*' || c == '-';
+    return c == '_' || c == '*' || c == '-' || c == '/' || c == '\'';
 }
+
+//bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
+//{
+//    char c = startCharacter;
+//    DocumentPart::FormatedText formatedText;
+
+//    if( startCharacter == '\0' ) {
+//        c = _file->getch();
+//    }
+
+//    text.line = _file->location().line;
+//    while( true ) {
+//        if( isFormatSpecifier(c) ) {
+//            const char previous = _file->previous();
+//            const char following = _file->following();
+//            if( (isWhitespace(previous, true) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
+//                auto store = formatedText;
+//                bool ok = false;
+//                switch(c) {
+//                case '_':
+//                    ok = !formatedText.bold;
+//                    formatedText.bold = true;
+//                    break;
+//                case '*':
+//                    ok = !formatedText.italic;
+//                    formatedText.italic = true;
+//                    break;
+//                case '-':
+//                    ok = !formatedText.crossedOut;
+//                    formatedText.crossedOut = true;
+//                    break;
+//                }
+//                if( !ok ) {
+//                    formatedText.text.push_back(c);
+//                } else {
+//                    if( !store.text.empty() ) {
+//                        text.text.push_back(store);
+//                        formatedText.text.clear();
+//                    }
+//                }
+//            } else if( (!isWhitespace(previous) ) && ( isWhitespace(following, true) || isFormatSpecifier(following)) ) {
+//                auto store = formatedText;
+//                bool ok = false;
+//                switch(c) {
+//                case '_':
+//                    ok = formatedText.bold;
+//                    formatedText.bold = false;
+//                    break;
+//                case '*':
+//                    ok = formatedText.italic;
+//                    formatedText.italic = false;
+//                    break;
+//                case '-':
+//                    ok = formatedText.crossedOut;
+//                    formatedText.crossedOut = false;
+//                    break;
+//                }
+//                if( !ok ) {
+//                    formatedText.text.push_back(c);
+//                } else {
+//                    if( !store.text.empty() ) {
+//                        text.text.push_back(store);
+//                        formatedText.text.clear();
+//                    }
+//                }
+//            } else {
+//                formatedText.text.push_back(c);
+//            }
+
+//        } else if( c == '\n' ) {
+//            if( !formatedText.text.empty() )
+//                text.text.push_back(formatedText);
+//            bool ok = true;
+//            if( formatedText.bold ) {
+//                _errors.push_back(Error{_file->location(), std::string("Bold formating ('_') was not closed.") });
+//                ok = false;
+//            }
+//            if( formatedText.italic ) {
+//                _errors.push_back(Error{_file->location(), std::string("Italic formating ('*') was not closed.") });
+//                ok = false;
+//            }
+//            if( formatedText.crossedOut ) {
+//                _errors.push_back(Error{_file->location(), std::string("Crossed out formating ('-') was not closed.") });
+//                ok = false;
+//            }
+//            return ok;
+//        } else if( c == '[' && _file->following() == '[' ) {
+//            if( !formatedText.text.empty() )
+//                text.text.push_back(formatedText);
+//            readAnchor();
+//            formatedText.text.clear();
+//        } else if( c == '<' && _file->following() == '<' ) {
+//            if( !formatedText.text.empty() ) {
+//                text.text.push_back(formatedText);
+//            }
+//            readLink();
+//            formatedText.text.clear();
+//        } else {
+//            formatedText.text.push_back(c);
+//        }
+
+//        if( _file->isEoF() )
+//            break;
+
+//        c = _file->getch();
+//    }
+
+//    // end of file is no error, when parsing text
+//    if( !formatedText.text.empty() )
+//        text.text.push_back(formatedText);
+//    return true;
+//}
 
 bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
 {
@@ -652,76 +769,56 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
     text.line = _file->location().line;
     while( true ) {
         if( isFormatSpecifier(c) ) {
-            const char previous = _file->previous();
             const char following = _file->following();
-            if( (isWhitespace(previous, true) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
+            if( following == c ) {
+                c = _file->getch();
                 auto store = formatedText;
-                bool ok = false;
                 switch(c) {
                 case '_':
-                    ok = !formatedText.bold;
-                    formatedText.bold = true;
+                    formatedText.underlined = !formatedText.underlined;
+                    break;
+                case '/':
+                    formatedText.italic = !formatedText.italic;
+                    break;
+                case '\'':
+                    formatedText.monospaced = !formatedText.monospaced;
                     break;
                 case '*':
-                    ok = !formatedText.italic;
-                    formatedText.italic = true;
+                    formatedText.bold = !formatedText.bold;
                     break;
                 case '-':
-                    ok = !formatedText.crossedOut;
-                    formatedText.crossedOut = true;
+                    formatedText.stroked = !formatedText.stroked;
                     break;
                 }
-                if( !ok ) {
-                    formatedText.text.push_back(c);
-                } else {
-                    if( !store.text.empty() ) {
-                        text.text.push_back(store);
-                        formatedText.text.clear();
-                    }
-                }
-            } else if( (!isWhitespace(previous) ) && ( isWhitespace(following, true) || isFormatSpecifier(following)) ) {
-                auto store = formatedText;
-                bool ok = false;
-                switch(c) {
-                case '_':
-                    ok = formatedText.bold;
-                    formatedText.bold = false;
-                    break;
-                case '*':
-                    ok = formatedText.italic;
-                    formatedText.italic = false;
-                    break;
-                case '-':
-                    ok = formatedText.crossedOut;
-                    formatedText.crossedOut = false;
-                    break;
-                }
-                if( !ok ) {
-                    formatedText.text.push_back(c);
-                } else {
-                    if( !store.text.empty() ) {
-                        text.text.push_back(store);
-                        formatedText.text.clear();
-                    }
+                if( !store.text.empty() ) {
+                    text.text.push_back(store);
+                    formatedText.text.clear();
                 }
             } else {
                 formatedText.text.push_back(c);
             }
-
         } else if( c == '\n' ) {
             if( !formatedText.text.empty() )
                 text.text.push_back(formatedText);
             bool ok = true;
             if( formatedText.bold ) {
-                _errors.push_back(Error{_file->location(), std::string("Bold formating ('_') was not closed.") });
+                _errors.push_back(Error{_file->location(), std::string("Bold formating (\"**'\") was not closed.") });
                 ok = false;
             }
             if( formatedText.italic ) {
-                _errors.push_back(Error{_file->location(), std::string("Italic formating ('*') was not closed.") });
+                _errors.push_back(Error{_file->location(), std::string("Italic formating (\"//\") was not closed.") });
                 ok = false;
             }
-            if( formatedText.crossedOut ) {
-                _errors.push_back(Error{_file->location(), std::string("Crossed out formating ('-') was not closed.") });
+            if( formatedText.monospaced ) {
+                _errors.push_back(Error{_file->location(), std::string("Monospace formating (\"''\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.stroked ) {
+                _errors.push_back(Error{_file->location(), std::string("Stroked formating (\"--\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.underlined ) {
+                _errors.push_back(Error{_file->location(), std::string("Underlined formating (\"--\") was not closed.") });
                 ok = false;
             }
             return ok;
@@ -731,8 +828,9 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
             readAnchor();
             formatedText.text.clear();
         } else if( c == '<' && _file->following() == '<' ) {
-            if( !formatedText.text.empty() )
+            if( !formatedText.text.empty() ) {
                 text.text.push_back(formatedText);
+            }
             readLink();
             formatedText.text.clear();
         } else {
@@ -750,6 +848,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
         text.text.push_back(formatedText);
     return true;
 }
+
 
 bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
 {

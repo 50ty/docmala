@@ -93,7 +93,9 @@ public:
         std::string text;
         bool bold = false;
         bool italic = false;
-        bool crossedOut = false;
+        bool monospaced = false;
+        bool stroked = false;
+        bool underlined = false;
     };
 
     struct GeneratedDocument : public VisualElement {

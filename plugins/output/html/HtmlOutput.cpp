@@ -141,8 +141,14 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, 
         if( text.italic ) {
             outFile << "<i>";
         }
-        if( text.crossedOut ) {
+        if( text.underlined ) {
+            outFile << "<u>";
+        }
+        if( text.stroked ) {
             outFile << "<del>";
+        }
+        if( text.monospaced ) {
+            outFile << "<tt>";
         }
         outFile << text.text;
 
@@ -152,9 +158,16 @@ void writeText(std::stringstream &outFile, const DocumentPart::Text *printText, 
         if( text.italic ) {
             outFile << "</i>";
         }
-        if( text.crossedOut ) {
+        if( text.stroked ) {
             outFile << "</del>";
         }
+        if( text.monospaced ) {
+            outFile << "</tt>";
+        }
+        if( text.underlined ) {
+            outFile << "</u>";
+        }
+
     }
 
     if( !isGenerated ) {
