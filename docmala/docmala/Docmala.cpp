@@ -1004,53 +1004,40 @@ bool Docmala::readBlock(std::string &block)
 {
     const std::string delimiter = "----";
 
-    enum class Mode {
-        Delimiter,
-        Text
-    } mode { Mode::Delimiter };
-
-
     std::string potentialDelimiter;
     bool searchingEnd = false;
 
     while( !_file->isEoF() ) {
         char c = _file->getch();
 
-        if( mode == Mode::Delimiter ) {
-            if( c == '-' ) {
-                potentialDelimiter.push_back(c);
-                continue;
-            } else {
-                if( potentialDelimiter.substr(0, 4) == "----" ) {
-                    if( c == '\n' ) {
-                        potentialDelimiter.clear();
-                        if( searchingEnd ) {
-                            return true;
-                        }
-                        searchingEnd = true;
-                        continue;
-                    } else {
-                        _errors.push_back(Error{_file->location(), std::string("Error while reading block. A valid delimiter may only contain '-' but a '") + c + "' was found." });
-                        return false;
+        if( c == '-' ) {
+            potentialDelimiter.push_back(c);
+            continue;
+        } else {
+            if( potentialDelimiter.substr(0, 4) == "----" ) {
+                if( c == '\n' ) {
+                    potentialDelimiter.clear();
+                    if( searchingEnd ) {
+                        return true;
                     }
+                    searchingEnd = true;
+                    continue;
                 } else {
-                    if( !searchingEnd ) {
-                        _errors.push_back(Error{_file->location(), std::string("Error while reading block. A valid delimiter ('") + delimiter + "') was expected but a '" + c + "' was found." });
-                        return false;
-                    } else {
-                        block.append(potentialDelimiter);
-                        block.push_back(c);
-                        potentialDelimiter.clear();
-                        mode = Mode::Text;
-                        continue;
-                    }
+                    _errors.push_back(Error{_file->location(), std::string("Error while reading block. A valid delimiter may only contain '-' but a '") + c + "' was found." });
+                    return false;
+                }
+            } else {
+                if( !searchingEnd ) {
+                    _errors.push_back(Error{_file->location(), std::string("Error while reading block. A valid delimiter ('") + delimiter + "') was expected but a '" + c + "' was found." });
+                    return false;
+                } else {
+                    block.append(potentialDelimiter);
+                    block.push_back(c);
+                    potentialDelimiter.clear();
+                    //mode = Mode::Text;
+                    continue;
                 }
             }
-        } else if( mode == Mode::Text ) {
-            if( c == '\n' ) {
-                mode = Mode::Delimiter;
-            }
-            block.push_back(c);
         }
     }
     _errors.push_back(Error{_file->location(), std::string("Error while parsing block. A valid block definition was expected but an 'end of file' was found.") });
