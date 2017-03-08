@@ -337,12 +337,20 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             } else {
                 std::ofstream imgFile;
                 std::stringstream fileName;
+
                 fileName << _nameBase << "_image_" << _imageCounter << "." << image->fileExtension;
 
                 imgFile.open(fileName.str(), std::ofstream::binary | std::ofstream::out);
                 imgFile << image->data;
                 imgFile.close();
-                outFile << "<img src=\"" << fileName.str() <<"\">" << std::endl;
+
+                std::string imageImportName = fileName.str();
+                std::replace( imageImportName.begin(), imageImportName.end(), '\\', '/');
+                if( imageImportName.find_last_of('/') != std::string::npos ) {
+                    imageImportName = imageImportName.substr(imageImportName.find_last_of('/')+1);
+                }
+
+                outFile << "<img src=\"" << imageImportName <<"\">" << std::endl;
             }
             if( previous->type() == DocumentPart::Type::Caption ) {
                 outFile << "<figcaption>Figure " << _figureCounter << ": ";
