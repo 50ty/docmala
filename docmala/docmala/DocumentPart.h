@@ -227,6 +227,10 @@ public:
         return boost::get<Text>(&_data);
     }
 
+    Text* text() {
+        return boost::get<Text>(&_data);
+    }
+
     const FormatedText* formatedText() const {
         return boost::get<FormatedText>(&_data);
     }
@@ -264,6 +268,9 @@ public:
     }
 
     const GeneratedDocument* generatedDocument() const {
+        return boost::get<GeneratedDocument>(&_data);
+    }
+    GeneratedDocument* generatedDocument() {
         return boost::get<GeneratedDocument>(&_data);
     }
 
