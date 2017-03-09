@@ -76,6 +76,17 @@ std::vector<std::string> Docmala::listOutputPlugins() const
     return knownOutputPlugins;
 }
 
+void Docmala::readComment()
+{
+    while( !_file->isEoF() )
+    {
+        char c = _file->getch();
+        if( c == '\n' ) {
+            break;
+        }
+    }
+}
+
 bool Docmala::parse()
 {
     _document.clear();
@@ -108,6 +119,9 @@ bool Docmala::parse()
                 continue;
             case '=':
                 readHeadLine();
+                break;
+            case ';':
+                readComment();
                 break;
             case '.':
                 readCaption();

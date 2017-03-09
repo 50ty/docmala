@@ -26,3 +26,8 @@ Formats can be applied to parts of words or multiple words:
 and multiple formats can be applied at once:
 
 * \__\//\** This is a\// test \** again\__ produces __//** This is a// test ** again__
+
+== Comments
+
+; Comments are working :)
+\; at the beginning of a line will create a comment that will not be passed into an output document.
