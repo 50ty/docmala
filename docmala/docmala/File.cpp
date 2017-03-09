@@ -178,10 +178,13 @@ char MemoryFile::_getch()
 
 File::File(const std::string &fileName)
 {
+    if( fileName.empty() || fileName.back() == '\\' || fileName.back() == '/' )
+        return;
+
     _fileName = fileName;
 
     std::ifstream in(fileName, std::ios::in | std::ios::binary);
-    if (in)
+    if (in.is_open())
     {
         in.seekg(0, std::ios::end);
         _data.resize( static_cast<std::string::size_type>(in.tellg()));

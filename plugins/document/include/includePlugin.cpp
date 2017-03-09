@@ -14,10 +14,6 @@ public:
     PostProcessing postProcessing() const override;
     bool postProcess(const ParameterList &parameters, const FileLocation &location, Document &document) override;
 
-    std::vector<Error> errors() const {
-        return _errors;
-    }
-
     void escapeFileName(std::string &fileName) {
         std::replace( fileName.begin(), fileName.end(), '.', '_');
     }
@@ -26,11 +22,38 @@ public:
 
     std::vector<Error> _errors;
     std::unique_ptr<Docmala> parser;
+    void updateDocumentParts(const std::string &includeFile, DocumentPart::GeneratedDocument &out, const std::vector<DocumentPart> &parts, bool keepHeadlineLevel, int baseLevel);
 };
 
 
 DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
     return BlockProcessing::No;
+}
+
+
+
+void IncludePlugin::updateDocumentParts(const std::string &includeFile, DocumentPart::GeneratedDocument &out, const std::vector<DocumentPart> &parts, bool keepHeadlineLevel, int baseLevel)
+{
+    int currentLevel = 0;
+    for( auto &part : parts ) {
+        if( !keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline) ) {
+            DocumentPart::Headline headline = *part.headline();
+            headline.level += baseLevel;
+            out.document.push_back(headline);
+            currentLevel = headline.level;
+        } else if( part.type() == DocumentPart::Type::Anchor && !includeFile.empty()) {
+            auto anchor = *part.anchor();
+            anchor.name = includeFile + ":" + anchor.name;
+            out.document.push_back(anchor);
+        } else if( part.type() == DocumentPart::Type::GeneratedDocument ){
+            auto generated = part.generatedDocument();
+            DocumentPart::GeneratedDocument outDoc(0);
+            updateDocumentParts("",  outDoc, generated->document, keepHeadlineLevel, currentLevel);
+            out.document.push_back(outDoc);
+        } else {
+            out.document.push_back(part);
+        }
+    }
 }
 
 bool IncludePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
@@ -93,19 +116,7 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
         }
     }
 
-    for( auto &part : doc.parts() ) {
-        if( !keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline) ) {
-            DocumentPart::Headline headline = *part.headline();
-            headline.level += baseLevel;
-            generated.document.push_back(headline);
-        } else if( part.type() == DocumentPart::Type::Anchor) {
-            auto anchor = *part.anchor();
-            anchor.name = includeFile + ":" + anchor.name;
-            generated.document.push_back(anchor);
-        } else {
-            generated.document.push_back(part);
-        }
-    }
+    updateDocumentParts(includeFile, generated, doc.parts(), keepHeadlineLevel, baseLevel);
 
     document.addPart(generated);
 

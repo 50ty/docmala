@@ -969,6 +969,7 @@ bool Docmala::readParameterList(ParameterList &parameters, char blockEnd)
                             continue;
                         } else {
                             mode = Mode::EndOrNext;
+                            valueMode = ValueMode::Normal;
                             continue;
                         }
                     } else if( c == '\n' ) {
