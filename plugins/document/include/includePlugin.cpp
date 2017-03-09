@@ -42,14 +42,14 @@ void IncludePlugin::updateDocumentParts(const std::string &identifier, DocumentP
             headline.level += baseLevel;
             out.document.push_back(headline);
             currentLevel = headline.level;
-        } else if( part.type() == DocumentPart::Type::Anchor && !identifier.empty()) {
+        } else if( part.type() == DocumentPart::Type::Anchor) {
             auto anchor = *part.anchor();
             anchor.name = identifier + ":" + anchor.name;
             out.document.push_back(anchor);
         } else if( part.type() == DocumentPart::Type::GeneratedDocument ){
             auto generated = part.generatedDocument();
             DocumentPart::GeneratedDocument outDoc(0);
-            updateDocumentParts("",  outDoc, generated->document, keepHeadlineLevel, currentLevel);
+            updateDocumentParts(identifier,  outDoc, generated->document, keepHeadlineLevel, currentLevel);
             out.document.push_back(outDoc);
         } else {
             out.document.push_back(part);

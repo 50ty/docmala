@@ -495,7 +495,7 @@ bool Docmala::readLink(DocumentPart::Text &outText)
 
                 if( data.find("://") != std::string::npos ) {
                     type = DocumentPart::Link::Type::Web;
-                } else if(data.find(":") != std::string::npos ) {
+                } else if(data.find(":") != std::string::npos && data.find(".") != std::string::npos) {
                     type = DocumentPart::Link::Type::InterFile;
                 }
 
@@ -766,7 +766,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
     while( true ) {
         if( isFormatSpecifier(c) ) {
             const char following = _file->following();
-            if( following == c ) {
+            if( following == c && _file->previous() != '\\') {
                 c = _file->getch();
                 auto store = formatedText;
                 switch(c) {
@@ -818,17 +818,22 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
                 ok = false;
             }
             return ok;
-        } else if( c == '[' && _file->following() == '[' ) {
+        } else if( c == '[' && _file->following() == '[' && _file->previous() != '\\') {
             if( !formatedText.text.empty() )
                 text.text.push_back(formatedText);
             readAnchor();
             formatedText.text.clear();
-        } else if( c == '<' && _file->following() == '<' ) {
+        } else if( c == '<' && _file->following() == '<' && _file->previous() != '\\') {
             if( !formatedText.text.empty() ) {
                 text.text.push_back(formatedText);
             }
             readLink(text);
             formatedText.text.clear();
+        } else if( c == '\\' ) {
+            if( _file->following() == '\\' ) {
+                c = _file->getch();
+                formatedText.text.push_back(c);
+            }
         } else {
             formatedText.text.push_back(c);
         }

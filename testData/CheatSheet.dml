@@ -1,0 +1,28 @@
+= Docmala Cheet Sheet
+
+== Headlines
+
+Headlines can be created in different levels:
+# = Level 1
+# == Level 2
+# === Level 3
+# ==== Level 4
+# ===== Level 5
+# ====== Level 6
+
+== Formated Text
+
+* \//italic\// produces //italic// text
+* \**bold\** produces **bold** text
+* \--stroked\-- produces --stroked-- text
+* \__underlined\__ produces __underlined__ text
+* \''monospaced\'' produces ''monospaced'' text
+
+Formats can be applied to parts of words or multiple words:
+
+* Th\**is\** is a t\--es\--t produces Th**is** is a t--es--t
+* \__This \--is a\-- test\__ produces __This --is a-- test__
+
+and multiple formats can be applied at once:
+
+* \__\//\** This is a\// test \** again\__ produces __//** This is a// test ** again__
