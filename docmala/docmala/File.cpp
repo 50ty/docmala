@@ -165,11 +165,11 @@ char MemoryFile::_getch()
 {
     char c = *_position;
     _position++;
-    if( previous() == '\n' ) {
+    if( c == '\r' ) {
+        return _getch();
+    } else if( previous() == '\n' ) {
         _line++;
         _column = 0;
-    } else if( c == '\r' ) {
-        return _getch();
     } else {
         _column++;
     }
