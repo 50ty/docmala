@@ -21,12 +21,11 @@ namespace docmala {
 
     private:
         void writeDocumentParts(std::stringstream &outFile,
-                                const Document &document,
                                 const std::vector<DocumentPart> &documentParts,
                                 bool isGenerated = false);
 
-        void writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const Document &document);
-        void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel = 0);
+        void writeTable(std::stringstream &outFile, const DocumentPart::Table *table);
+        void writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const std::vector<DocumentPart> &documentParts, bool isGenerated, int currentLevel = 0);
 
 
         unsigned int _imageCounter = 1;

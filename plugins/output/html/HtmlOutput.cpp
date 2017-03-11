@@ -189,7 +189,7 @@ void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
 }
 
 
-void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Table *table, const Document &document)
+void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Table *table)
 {
     outFile << "<table>" << std::endl;
     bool firstRow = true;
@@ -221,7 +221,7 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
                 end = "</td>";
             }
 
-            writeDocumentParts(outFile, document, cell.content, true);
+            writeDocumentParts(outFile, cell.content, true);
             outFile << std::endl << end << std::endl;
 
             firstColumn = false;
@@ -232,7 +232,7 @@ void HtmlOutput::writeTable(std::stringstream &outFile, const DocumentPart::Tabl
     outFile << "</table>" << std::endl;
 }
 
-void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const Document &document, bool isGenerated, int currentLevel)
+void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>::const_iterator &start, const std::vector<DocumentPart> &documentParts, bool isGenerated, int currentLevel)
 {
     auto list = start->list();
     if( currentLevel < list->level ) {
@@ -254,8 +254,8 @@ void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>
         currentLevel++;
         outFile << "<" << type << " " << style << ">" << std::endl;
         while( true ) {
-            writeList(outFile, start, document, isGenerated, currentLevel);
-            if( start +1 == document.parts().end() || (start+1)->type() != DocumentPart::Type::List || (start+1)->list()->level < currentLevel ) {
+            writeList(outFile, start, documentParts, isGenerated, currentLevel);
+            if( start +1 == documentParts.end() || (start+1)->type() != DocumentPart::Type::List || (start+1)->list()->level < currentLevel ) {
                 break;
             } else {
                 start++;
@@ -266,16 +266,16 @@ void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>
     } else if( currentLevel == list->level ) {
         for( auto entry : list->entries ) {
             outFile << "<li> ";
-            writeDocumentParts(outFile, document, entry.text, isGenerated);
+            writeDocumentParts(outFile, entry.text, isGenerated);
             outFile << " </li>" << std::endl;
         }
     }
 }
 
-void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &document, const std::vector<DocumentPart> &documentParts, bool isGenerated)
+void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const std::vector<DocumentPart> &documentParts, bool isGenerated)
 {
     bool paragraphOpen = false;
-    std::vector<DocumentPart>::const_iterator previous = document.parts().end();
+    std::vector<DocumentPart>::const_iterator previous = documentParts.end();
 
     for( std::vector<DocumentPart>::const_iterator part = documentParts.begin(); part != documentParts.end(); part++ ) {
         switch(part->type() ) {
@@ -293,7 +293,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             if( !isGenerated ) {
                 outFile << "<span " << id(headline) << ">";
             }
-            writeDocumentParts(outFile, document, headline->text, isGenerated);
+            writeDocumentParts(outFile, headline->text, isGenerated);
             if( !isGenerated ) {
                 outFile << "</span>" << std::endl;
             }
@@ -312,7 +312,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
                 outFile << "<span " << id(text) << ">";
             }
 
-            writeDocumentParts(outFile, document, text->text, isGenerated);
+            writeDocumentParts(outFile, text->text, isGenerated);
 
             if( !isGenerated ) {
                 outFile << "</span>" << std::endl;
@@ -357,7 +357,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
                 if( !isGenerated ) {
                     outFile << "<span " << id(previous->caption()) << ">";
                 }
-                writeDocumentParts(outFile, document, previous->caption()->text, isGenerated );
+                writeDocumentParts(outFile, previous->caption()->text, isGenerated );
                 if( !isGenerated ) {
                     outFile << "</span>" << std::endl;
                 }
@@ -369,13 +369,13 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             break;
         }
         case DocumentPart::Type::List: {
-            writeList(outFile, part, document, isGenerated);
+            writeList(outFile, part, documentParts, isGenerated);
             break;
         }
         case DocumentPart::Type::GeneratedDocument: {
             auto generated = part->generatedDocument();
             outFile << "<div " << id(generated) << ">" << std::endl;
-            writeDocumentParts(outFile, document, generated->document, true);
+            writeDocumentParts(outFile, generated->document, true);
             outFile << "</div>" << std::endl;
             break;
         }
@@ -409,7 +409,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const Document &
             break;
         }
         case DocumentPart::Type::Table: {
-            writeTable(outFile, part->table(), document);
+            writeTable(outFile, part->table());
             break;
         }
         default:
@@ -509,7 +509,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList &parameters
     head << "</script>" << std::endl;
     head << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
 
-    writeDocumentParts(body, document, document.parts() );
+    writeDocumentParts(body, document.parts() );
 
     html.head = head.str();
     html.body = body.str();
