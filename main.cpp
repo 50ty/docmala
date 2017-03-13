@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
         ("input,i", boost::program_options::value<std::string>(), "input file")
         ("outputdir,o", boost::program_options::value<std::string>(), "output directory")
         ("outputplugins,p", boost::program_options::value<std::vector<std::string>>(), "plugins for output generation")
+        ("parameters", boost::program_options::value<std::vector<std::string>>()->multitoken(), "parameters for plugins in form [key]=[value] or [key] for flags")
         ("listoutputplugins,l", "print a list of output plugins")
     ;
 
@@ -51,6 +52,19 @@ int main(int argc, char *argv[])
         outputDir = vm["outputdir"].as<std::string>();
     } else {
         outputDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
+    }
+
+    if (vm.count("parameters")) {
+        for( auto parameter : vm["parameters"].as<std::vector<std::string>>() ) {
+            auto equalsLocation = parameter.find_first_of('=');
+            if( equalsLocation != std::string::npos ) {
+                std::string key = parameter.substr(0, equalsLocation);
+                std::string value = parameter.substr(equalsLocation+1);
+                parameters.insert(std::make_pair(key, docmala::Parameter{key, value, docmala::FileLocation()} ));
+            } else {
+                parameters.insert(std::make_pair(parameter, docmala::Parameter{parameter, "", docmala::FileLocation()} ));
+            }
+        }
     }
 
     parameters.insert(std::make_pair("outputdir", docmala::Parameter{"outputdir", outputDir, docmala::FileLocation()} ));
