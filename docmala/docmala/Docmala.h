@@ -25,6 +25,7 @@ namespace docmala {
         Docmala(const Document other, const std::string &pluginDir = "./");
         ~Docmala();
 
+        void setParameters(const ParameterList &parameters);
         bool parseFile(const std::string &fileName);
         bool parseData(const std::string &data, const std::string &fileName = "");
 
@@ -46,6 +47,8 @@ namespace docmala {
         }
         void readComment();
 
+        static bool readText(IFile *file, std::vector<Error> &errors, char startCharacter, DocumentPart::Text &text);
+
     private:
         bool parse();
         void doPostprocessing();
@@ -55,8 +58,10 @@ namespace docmala {
         bool readCaption();
         bool readLine(std::string &destination);
         bool readPlugin();
-        bool readAnchor();
+        //bool readAnchor();
+        static bool readAnchor(IFile *file, std::vector<Error> &errors, DocumentPart::Text &outText);
         bool readLink(DocumentPart::Text &outText);
+        static bool readLink(IFile *file, std::vector<Error> &errors, DocumentPart::Text &outText);
         bool readMetaData();
         bool readText(char startCharacter, DocumentPart::Text &text);
 
@@ -64,8 +69,7 @@ namespace docmala {
         bool readBlock(std::string &block);
         bool readList(DocumentPart::List::Type type);
 
-        bool isWhitespace(char c, bool allowEndline = false) const;
-
+        static bool isWhitespace(char c, bool allowEndline = false);
 
         /**
          * A document consists of many document parts
@@ -77,6 +81,7 @@ namespace docmala {
         std::unique_ptr<extension_system::ExtensionSystem> _pluginLoader;
         std::string _outputDir;
         std::map<std::string, std::shared_ptr<DocumentPlugin>> _loadedDocumentPlugins;
+        ParameterList _parameters;
 
         struct PostProcessingInfo {
             std::shared_ptr<DocumentPlugin> plugin;

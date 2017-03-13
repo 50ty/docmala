@@ -29,6 +29,7 @@ int main(int argc, char *argv[])
     }
 
     docmala::Docmala docmala;
+    docmala::ParameterList parameters;
 
     if (vm.count("listoutputplugins")) {
         for( auto plugin : docmala.listOutputPlugins() )
@@ -52,6 +53,7 @@ int main(int argc, char *argv[])
         outputDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
     }
 
+    parameters.insert(std::make_pair("outputdir", docmala::Parameter{"outputdir", outputDir, docmala::FileLocation()} ));
     docmala.parseFile(inputFile);
 
     for( const auto &error : docmala.errors() ) {

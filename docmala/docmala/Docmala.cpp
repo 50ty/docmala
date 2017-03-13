@@ -27,6 +27,11 @@ Docmala::~Docmala()
 
 }
 
+void Docmala::setParameters(const ParameterList &parameters)
+{
+    _parameters = parameters;
+}
+
 bool Docmala::parseFile(const std::string &fileName)
 {
     _file.reset( new File(fileName) );
@@ -55,7 +60,7 @@ bool Docmala::produceOutput(const std::string &pluginName)
 bool Docmala::produceOutput(std::shared_ptr<OutputPlugin> plugin)
 {
     if( plugin ) {
-        ParameterList parameters;
+        ParameterList parameters = _parameters;
 
         parameters.insert(std::make_pair("inputFile", Parameter{"inputFile", _file->fileName(), FileLocation()} ) );
         plugin->write(parameters, _document);
@@ -131,7 +136,9 @@ bool Docmala::parse()
                 break;
             case '[':
                 if( _file->following() == '[' ) {
-                    readAnchor();
+                    DocumentPart::Text text;
+                    readText(c, text);
+                    _document.addPart(text);
                 } else {
                     readPlugin();
                 }
@@ -370,7 +377,7 @@ bool Docmala::readPlugin()
     return true;
 }
 
-bool Docmala::readAnchor()
+bool Docmala::readAnchor(IFile *_file, std::vector<Error> &_errors, DocumentPart::Text &outText)
 {
     enum class Mode {
         Begin,
@@ -417,16 +424,16 @@ bool Docmala::readAnchor()
                 _errors.push_back(Error{ location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'." });
                 return false;
             } else {
-                auto prevAnchor = _document.anchors().find(name);
-                if( prevAnchor != _document.anchors().end() ) {
-                    auto loc = prevAnchor->second.location;
-                    ErrorData additionalInfo {loc, std::string("Previous definition of '") + name + "' is at " +
-                                loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
-                    _errors.push_back(Error{ location, std::string("Anchor with name '") + name + "' already defined.", {additionalInfo} });
-                    return false;
-                }
+//                auto prevAnchor = _document.anchors().find(name);
+//                if( prevAnchor != _document.anchors().end() ) {
+//                    auto loc = prevAnchor->second.location;
+//                    ErrorData additionalInfo {loc, std::string("Previous definition of '") + name + "' is at " +
+//                                loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
+//                    _errors.push_back(Error{ location, std::string("Anchor with name '") + name + "' already defined.", {additionalInfo} });
+//                    return false;
+//                }
 
-                _document.addPart( DocumentPart::Anchor{name, anchorLocation} );
+                outText.text.push_back( DocumentPart::Anchor{name, anchorLocation} );
                 return true;
             }
         } else if( mode == Mode::EndTag2 ) {
@@ -448,6 +455,11 @@ bool Docmala::readAnchor()
 
 bool Docmala::readLink(DocumentPart::Text &outText)
 {
+    return readLink(_file.get(), _errors, outText);
+}
+
+bool Docmala::readLink(IFile *file, std::vector<Error> &errors, DocumentPart::Text &outText)
+{
     enum class Mode {
         Begin,
         Data,
@@ -458,18 +470,18 @@ bool Docmala::readLink(DocumentPart::Text &outText)
 
     std::string text;
     std::string data;
-    auto linkLocation = _file->location();
+    auto linkLocation = file->location();
 
-    while( !_file->isEoF() ) {
-        auto location = _file->location();
-        char c = _file->getch();
+    while( !file->isEoF() ) {
+        auto location = file->location();
+        char c = file->getch();
 
         if( mode == Mode::Begin ) {
             if( c == '<' ) {
                 mode = Mode::Data;
                 continue;
             } else {
-                _errors.push_back(Error{ location, std::string("Expected '<' but got '") + c + "'. This is an error in Docmala." });
+                errors.push_back(Error{ location, std::string("Expected '<' but got '") + c + "'. This is an error in Docmala." });
                 return false;
             }
         } else if( mode == Mode::Data ) {
@@ -490,19 +502,19 @@ bool Docmala::readLink(DocumentPart::Text &outText)
         } else if( mode == Mode::Text ) {
             if( c == '>' ) {
                 if( text.empty() ) {
-                    _errors.push_back(Error{_file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty.") });
+                    errors.push_back(Error{file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty.") });
                 }
                 mode = Mode::EndTag1;
                 continue;
             } else if( c == '\n' ) {
-                _errors.push_back(Error{_file->location(), std::string("Error while parsing link. A end tag '>>' was expected but a 'newline' was found.") });
+                errors.push_back(Error{file->location(), std::string("Error while parsing link. A end tag '>>' was expected but a 'newline' was found.") });
                 return false;
             } else {
                 text.push_back(c);
             }
         } else if( mode == Mode::EndTag1 ) {
             if( c != '>' ) {
-                _errors.push_back(Error{ location, std::string("Error while parsing link. Expected '>' but got '") + c + "'." });
+                errors.push_back(Error{ location, std::string("Error while parsing link. Expected '>' but got '") + c + "'." });
                 return false;
             } else {
                 auto type = DocumentPart::Link::Type::IntraFile;
@@ -514,7 +526,7 @@ bool Docmala::readLink(DocumentPart::Text &outText)
                 }
 
                 if( data.empty() ) {
-                    _errors.push_back(Error{linkLocation, std::string("Error while parsing link. Link data is not allowed to be empty.") });
+                    errors.push_back(Error{linkLocation, std::string("Error while parsing link. Link data is not allowed to be empty.") });
                     return false;
                 }
 
@@ -528,15 +540,14 @@ bool Docmala::readLink(DocumentPart::Text &outText)
                 mode = Mode::EndTag1;
                 continue;
             } else {
-                _errors.push_back(Error{ location, std::string("Error while parsing anchor. Expected '>' but got '") + c + "'." });
+                errors.push_back(Error{ location, std::string("Error while parsing anchor. Expected '>' but got '") + c + "'." });
                 return false;
             }
         }
     }
 
-    _errors.push_back(Error{ _file->location(), std::string("Error while parsing anchor. Unexpected end of file." ) } );
+    errors.push_back(Error{ file->location(), std::string("Error while parsing anchor. Unexpected end of file." ) } );
     return false;
-
 }
 
 bool Docmala::readMetaData()
@@ -769,7 +780,8 @@ bool isFormatSpecifier(char c)
 
 bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
 {
-    char c = startCharacter;
+    return readText(_file.get(), _errors, startCharacter, text);
+/*    char c = startCharacter;
     DocumentPart::FormatedText formatedText;
 
     if( startCharacter == '\0' ) {
@@ -856,6 +868,104 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
             break;
 
         c = _file->getch();
+    }
+
+    // end of file is no error, when parsing text
+    if( !formatedText.text.empty() )
+        text.text.push_back(formatedText);
+    return true;
+    */
+}
+
+bool Docmala::readText(IFile *file, std::vector<Error> &errors, char startCharacter, DocumentPart::Text &text)
+{
+    char c = startCharacter;
+    DocumentPart::FormatedText formatedText;
+
+    if( startCharacter == '\0' ) {
+        c = file->getch();
+    }
+
+    text.line = file->location().line;
+    while( true ) {
+        if( isFormatSpecifier(c) ) {
+            const char following = file->following();
+            if( following == c && file->previous() != '\\') {
+                c = file->getch();
+                auto store = formatedText;
+                switch(c) {
+                case '_':
+                    formatedText.underlined = !formatedText.underlined;
+                    break;
+                case '/':
+                    formatedText.italic = !formatedText.italic;
+                    break;
+                case '\'':
+                    formatedText.monospaced = !formatedText.monospaced;
+                    break;
+                case '*':
+                    formatedText.bold = !formatedText.bold;
+                    break;
+                case '-':
+                    formatedText.stroked = !formatedText.stroked;
+                    break;
+                }
+                if( !store.text.empty() ) {
+                    text.text.push_back(store);
+                    formatedText.text.clear();
+                }
+            } else {
+                formatedText.text.push_back(c);
+            }
+        } else if( c == '\n' ) {
+            if( !formatedText.text.empty() )
+                text.text.push_back(formatedText);
+            bool ok = true;
+            if( formatedText.bold ) {
+                errors.push_back(Error{file->location(), std::string("Bold formating (\"**'\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.italic ) {
+                errors.push_back(Error{file->location(), std::string("Italic formating (\"//\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.monospaced ) {
+                errors.push_back(Error{file->location(), std::string("Monospace formating (\"''\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.stroked ) {
+                errors.push_back(Error{file->location(), std::string("Stroked formating (\"--\") was not closed.") });
+                ok = false;
+            }
+            if( formatedText.underlined ) {
+                errors.push_back(Error{file->location(), std::string("Underlined formating (\"--\") was not closed.") });
+                ok = false;
+            }
+            return ok;
+        } else if( c == '[' && file->following() == '[' && file->previous() != '\\') {
+            if( !formatedText.text.empty() )
+                text.text.push_back(formatedText);
+            readAnchor(file, errors, text);
+            formatedText.text.clear();
+        } else if( c == '<' && file->following() == '<' && file->previous() != '\\') {
+            if( !formatedText.text.empty() ) {
+                text.text.push_back(formatedText);
+            }
+            readLink(file, errors, text);
+            formatedText.text.clear();
+        } else if( c == '\\' ) {
+            if( file->following() == '\\' ) {
+                c = file->getch();
+                formatedText.text.push_back(c);
+            }
+        } else {
+            formatedText.text.push_back(c);
+        }
+
+        if( file->isEoF() )
+            break;
+
+        c = file->getch();
     }
 
     // end of file is no error, when parsing text
@@ -1094,7 +1204,7 @@ bool Docmala::readList(DocumentPart::List::Type type)
     return false;
 }
 
-bool Docmala::isWhitespace(char c, bool allowEndline) const
+bool Docmala::isWhitespace(char c, bool allowEndline)
 {
     return c == ' ' || c == '\t' || (allowEndline && (c == '\n' || c == '\0'));
 }
