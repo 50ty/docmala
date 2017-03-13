@@ -52,6 +52,7 @@ namespace docmala {
     private:
         bool parse();
         void doPostprocessing();
+        void postProcessPartList(const std::vector<DocumentPart> &parts);
         void checkConsistency();
 
         bool readHeadLine();

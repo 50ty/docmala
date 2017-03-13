@@ -125,10 +125,16 @@ bool TablePlugin::process(const ParameterList &parameters, const FileLocation &l
         if( readCellResult == ReadCellResult::EndOfTable ) {
             break;
         } else if( readCellResult == ReadCellResult::CellContent ) {
+            FileLocation tableLocation = _file->location();
+            tableLocation.line += location.line + 1;
+            tableLocation.column -= cellContent.length();
+            std::unique_ptr<IFile> file( new MemoryFile(cellContent, tableLocation) );
+
             DocumentPart::Text text;
-            DocumentPart::FormatedText ft;
-            ft.text = cellContent;
-            text.text.push_back(ft);
+            Docmala::readText(file.get(), _errors, '\0', text);
+//            DocumentPart::FormatedText ft;
+//            ft.text = cellContent;
+//            text.text.push_back(ft);
             DocumentPart::Table::Cell cell;
             cell.content.push_back(text);
 
@@ -181,6 +187,7 @@ TablePlugin::ReadCellResult TablePlugin::readNextCell(std::string &cellContent)
     while( !_file->isEoF() )
     {
         char c = _file->getch();
+
         if( (c == '|' && _file->previous() != '|') ) {
             return ReadCellResult::CellContent;
         }

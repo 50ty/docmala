@@ -11,15 +11,7 @@ namespace docmala {
     public:
         void addPart(const DocumentPart& part) {
             _parts.push_back(part);
-            if( part.type() == DocumentPart::Type::Anchor ) {
-                _anchors.insert(std::make_pair(part.anchor()->name, *part.anchor()));
-            } else if( part.type() == DocumentPart::Type::GeneratedDocument ) {
-                for( const auto &p : part.generatedDocument()->document ) {
-                    if( p.type() == DocumentPart::Type::Anchor ) {
-                        _anchors.insert(std::make_pair(p.anchor()->name, *p.anchor()));
-                    }
-                }
-            }
+            addAnchors(part);
         }
 
         void addMetaData(const MetaData& metaData) {
@@ -65,6 +57,28 @@ namespace docmala {
             return _metaData;
         }
     private:
+        void addAnchors(const DocumentPart& part) {
+            if( part.type() == DocumentPart::Type::Anchor ) {
+                _anchors.insert(std::make_pair(part.anchor()->name, *part.anchor()));
+            } else if( part.type() == DocumentPart::Type::GeneratedDocument ) {
+                for( const auto &p : part.generatedDocument()->document ) {
+                    addAnchors(p);
+                }
+            } else if( part.type() == DocumentPart::Type::Text ) {
+                for( const auto &p : part.text()->text ) {
+                    addAnchors(p);
+                }
+            } else if( part.type() == DocumentPart::Type::Table ) {
+                for( auto row : part.table()->cells ) {
+                    for( auto cell : row ) {
+                        for( const auto &p : cell.content ) {
+                            addAnchors(p);
+                        }
+                    }
+                }
+            }
+        }
+
         std::vector<DocumentPart> _parts;
         std::map<std::string, DocumentPart::Anchor> _anchors;
         std::map<std::string, MetaData> _metaData;

@@ -15,6 +15,14 @@ namespace docmala {
         int line = 0;
         int column = 0;
         std::string fileName = "internal";
+
+        bool operator == (const FileLocation &other ) const {
+            return line == other.line && column == other.column && fileName == other.fileName;
+        }
+
+        bool operator != (const FileLocation &other ) const {
+            return !(*this == other);
+        }
     };
 
 }

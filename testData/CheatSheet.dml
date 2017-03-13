@@ -31,3 +31,28 @@ and multiple formats can be applied at once:
 
 ; Comments are working :)
 \; at the beginning of a line will create a comment that will not be passed into an output document.
+
+== Plugins
+
+=== Tables
+
+The following code produces a table:
+; todo make block ---- escapeable
+[code]
+----
+     || col1 | col2 | col3
+==========================
+row1 ||  1,1 | 1,2  | 1,3
+row2 ||  2,1 | 2,2  | 2,3
+row3 ||  3,1 | 3,2  | 3,3
+----
+
+
+[table]
+----
+     || col1 | col2 | col3
+=========================
+row1 ||  1,1 | 1,2  | 1,3
+row2 ||  2,1 | 2,2  | 2,3
+row3 ||  3,1 | 3,2  | 3,3
+----

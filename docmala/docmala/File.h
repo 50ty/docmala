@@ -63,6 +63,7 @@ namespace docmala {
 
     public:
         MemoryFile(const std::string &data, const std::string &fileName = "");
+        MemoryFile(const std::string &data, const FileLocation &baseLocation);
         bool isOpen() const override;
 
         bool isEoF() const override;

@@ -198,6 +198,31 @@ void Docmala::doPostprocessing()
             }
         }
     }
+
+    postProcessPartList(_document.parts());
+}
+
+void Docmala::postProcessPartList(const std::vector<DocumentPart> &parts)
+{
+    for( auto part : parts ) {
+        if( part.type() == DocumentPart::Type::Anchor ) {
+            auto prevAnchor = _document.anchors().find(part.anchor()->name);
+            if( prevAnchor != _document.anchors().end() && prevAnchor->second.location != part.anchor()->location ) {
+                auto loc = prevAnchor->second.location;
+                ErrorData additionalInfo {loc, std::string("Previous definition of '") + part.anchor()->name + "' is at " +
+                            loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
+                _errors.push_back(Error{ part.anchor()->location, std::string("Anchor with name '") + part.anchor()->name + "' already defined.", {additionalInfo} });
+            }
+        } else if( part.text() ) {
+            postProcessPartList(part.text()->text);
+        } else if( part.table() ) {
+            for( auto row : part.table()->cells ) {
+                for( auto cell : row ) {
+                    postProcessPartList(cell.content);
+                }
+            }
+        }
+    }
 }
 
 void Docmala::checkConsistency()
@@ -424,15 +449,6 @@ bool Docmala::readAnchor(IFile *_file, std::vector<Error> &_errors, DocumentPart
                 _errors.push_back(Error{ location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'." });
                 return false;
             } else {
-//                auto prevAnchor = _document.anchors().find(name);
-//                if( prevAnchor != _document.anchors().end() ) {
-//                    auto loc = prevAnchor->second.location;
-//                    ErrorData additionalInfo {loc, std::string("Previous definition of '") + name + "' is at " +
-//                                loc.fileName + "(" + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
-//                    _errors.push_back(Error{ location, std::string("Anchor with name '") + name + "' already defined.", {additionalInfo} });
-//                    return false;
-//                }
-
                 outText.text.push_back( DocumentPart::Anchor{name, anchorLocation} );
                 return true;
             }

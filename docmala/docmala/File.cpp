@@ -12,6 +12,16 @@ MemoryFile::MemoryFile(const std::string &data, const std::string &fileName)
 {
 }
 
+MemoryFile::MemoryFile(const std::string &data, const FileLocation &baseLocation)
+    : _data(data)
+    , _fileName(baseLocation.fileName)
+    , _position(_data.begin())
+    , _line(baseLocation.line)
+    , _column(baseLocation.column)
+{
+
+}
+
 bool MemoryFile::isOpen() const
 {
     return !_data.empty();
