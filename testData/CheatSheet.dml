@@ -10,6 +10,52 @@ Headlines can be created in different levels:
 # ===== Level 5
 # ====== Level 6
 
+== Lists
+=== Unordered Lists
+
+Unordert lists can be created using the ''*'' sign:
+[code, type=text]
+----
+* item 1
+** item 1.1
+*** item 1.1.1
+** item 1.2
+*** item 1.2.1
+* item 2
+----
+
+produces:
+
+* item 1
+** item 1.1
+*** item 1.1.1
+** item 1.2
+*** item 1.2.1
+* item 2
+
+=== Ordered Lists
+
+Unordert lists can be created using the ''#'' sign:
+[code, type=text]
+----
+# item 1
+## item 1.1
+### item 1.1.1
+## item 1.2
+### item 1.2.1
+# item 2
+----
+
+produces:
+
+# item 1
+## item 1.1
+### item 1.1.1
+## item 1.2
+### item 1.2.1
+# item 2
+
+
 == Formated Text
 
 * \//italic\// produces //italic// text
@@ -32,19 +78,93 @@ and multiple formats can be applied at once:
 ; Comments are working :)
 \; at the beginning of a line will create a comment that will not be passed into an output document.
 
+[[ref1]]
+== Anchors
+
+An anchor is defined by ''\[[ref_name]]'' and has to be unique within a document.
+Anchors can be used by links to create cross references in the document.
+
+== Links
+
+A link is defined using the ''\<<destination>>'' or ''\<<destination, text>>'' syntax.
+If only the destination is given, it is shown as link text.
+
+Links may be to internet addresses:
+* ''\<<http:\//google.de>>'' produces <<http://google.de>>
+* ''\<<http:\//google.de, see google>>'' produces <<http://google.de, see google>>.
+
+within a document:
+* ''\<<ref1>>'' links to a reference defined by ''\[[ref1]]'': <<ref1>>
+* ''\<<ref1, see there>>'' produces: <<ref1, see there>>.
+
+or even between documents:
+* ''\<<testInclude.dml:ref1>>'' links to a reference defined by ''\[[ref1]]''in the documument ''testInclude.dml''
+when the given document is included in the current document using the ''[include]'' plugin,
+the cross-document links are replaced intra-document links.
+
 == Plugins
 
 === Tables
 
-The following code produces a table:
-; todo make block ---- escapeable
-[code]
+==== Simple Table
+
+[code, type=text]
 ----
+[table]
+\----
+ 1,1 | 1,2  | 1,3
+ 2,1 | 2,2  | 2,3
+ 3,1 | 3,2  | 3,3
+\----
+----
+
+The code above produces the following table:
+[table]
+----
+ 1,1 | 1,2  | 1,3
+ 2,1 | 2,2  | 2,3
+ 3,1 | 3,2  | 3,3
+----
+
+==== Headlines
+
+Headlines can be achived by seperating the headline cells using a line of ''='' signs.
+
+[code, type=text]
+----
+[table]
+\----
+col1 | col2 | col3
+==================
+ 1,1 | 1,2  | 1,3
+ 2,1 | 2,2  | 2,3
+ 3,1 | 3,2  | 3,3
+\----
+----
+
+The code above produces the following table:
+
+[table]
+----
+col1 | col2 | col3
+==================
+ 1,1 | 1,2  | 1,3
+ 2,1 | 2,2  | 2,3
+ 3,1 | 3,2  | 3,3
+----
+
+
+And row headlines are defined using ''||'':
+[code, type=text]
+----
+[table]
+\----
      || col1 | col2 | col3
 ==========================
 row1 ||  1,1 | 1,2  | 1,3
 row2 ||  2,1 | 2,2  | 2,3
 row3 ||  3,1 | 3,2  | 3,3
+\----
 ----
 
 
@@ -55,4 +175,107 @@ row3 ||  3,1 | 3,2  | 3,3
 row1 ||  1,1 | 1,2  | 1,3
 row2 ||  2,1 | 2,2  | 2,3
 row3 ||  3,1 | 3,2  | 3,3
+----
+
+==== Spans
+
+Row-spans are defined using a ''+x'' behind the ''|'' separator:
+
+[code, type=text]
+----
+[table]
+\----
+     || col1 | col2 | col3
+==========================
+row1 ||  1,1 |+1 1,2
+row2 ||  2,1 | 2,2  | 2,3
+row3 ||  3,1 | 3,2  | 3,3
+\----
+----
+
+
+[table]
+----
+     || col1 | col2 | col3
+=========================
+row1 ||  1,1 |+1 1,2
+row2 ||  2,1 | 2,2  | 2,3
+row3 ||  3,1 | 3,2  | 3,3
+----
+
+Column-spans are defined using a ''+0:x'' behind the ''|'' separator:
+
+[code, type=text]
+----
+[table]
+\----
+     || col1 | col2 | col3
+===========================
+row1 ||  1,1 |+0:1 1,2| 1,3
+row2 ||  2,1          | 2,3
+row3 ||  3,1 | 3,2    | 3,3
+\----
+----
+
+
+[table]
+----
+     || col1 | col2 | col3
+===========================
+row1 ||  1,1 |+0:1 1,2| 1,3
+row2 ||  2,1          | 2,3
+row3 ||  3,1 | 3,2    | 3,3
+----
+
+Row and Column-spans are defined using a ''+x:y'' behind the ''|'' separator:
+
+[code, type=text]
+----
+[table]
+\----
+     || col1 | col2 | col3
+===========================
+row1 ||  1,1 |+1:1 1,2
+row2 ||  2,1
+row3 ||  3,1 | 3,2    | 3,3
+\----
+----
+
+
+[table]
+----
+     || col1 | col2 | col3
+===========================
+row1 ||  1,1 |+1:1 1,2
+row2 ||  2,1
+row3 ||  3,1 | 3,2    | 3,3
+----
+
+=== UML
+
+Docma uses plantuml to draw uml diagrams:
+
+[code, type=text]
+----
+[plantuml]
+\----
+interface Interface
+class Alice
+class Bob
+
+Alice -up-> Interface
+Bob -up-> Interface
+Alice -* Bob
+\----
+----
+
+[plantuml]
+----
+interface Interface
+class Alice
+class Bob
+
+Alice -up-> Interface
+Bob -up-> Interface
+Alice -* Bob
 ----

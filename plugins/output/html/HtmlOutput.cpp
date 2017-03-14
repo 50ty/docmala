@@ -150,7 +150,10 @@ void writeFormatedText(std::stringstream &outFile, const DocumentPart::FormatedT
     if( text->monospaced ) {
         outFile << "<tt>";
     }
-    outFile << text->text;
+    std::string txt = text->text;
+    replaceAll(txt, "<", "&lt;");
+    replaceAll(txt, ">", "&gt;");
+    outFile << txt;
 
     if( text->bold ) {
         outFile << "</b>";

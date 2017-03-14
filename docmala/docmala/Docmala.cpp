@@ -1156,7 +1156,7 @@ bool Docmala::readBlock(std::string &block)
     while( !_file->isEoF() ) {
         char c = _file->getch();
 
-        if( c == '-' ) {
+        if( c == '-' || (c == '\\' && potentialDelimiter.empty())) {
             potentialDelimiter.push_back(c);
             continue;
         } else {
@@ -1177,7 +1177,11 @@ bool Docmala::readBlock(std::string &block)
                     _errors.push_back(Error{_file->location(), std::string("Error while reading block. A valid delimiter ('") + delimiter + "') was expected but a '" + c + "' was found." });
                     return false;
                 } else {
-                    block.append(potentialDelimiter);
+                    if( potentialDelimiter.size() > 0 && potentialDelimiter.front() == '\\' ) {
+                        block.append(potentialDelimiter.substr(1));
+                    } else {
+                        block.append(potentialDelimiter);
+                    }
                     block.push_back(c);
                     potentialDelimiter.clear();
                     //mode = Mode::Text;
