@@ -15,3 +15,20 @@ ul.dash li:before {
     position: absolute; 
     margin-left: -15px;     
 }
+
+ol {
+    counter-reset: item;
+}
+
+ol > li {
+    counter-increment: item;
+}
+
+ol ol > li {
+    display: block;
+}
+
+ol ol > li:before {
+    content: counters(item, ".") ". ";
+    margin-left: -20px;
+}

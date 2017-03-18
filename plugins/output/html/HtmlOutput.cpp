@@ -267,9 +267,15 @@ void HtmlOutput::writeList(std::stringstream &outFile, std::vector<DocumentPart>
         outFile << "</" << type << ">" << std::endl;
         currentLevel--;
     } else if( currentLevel == list->level ) {
-        for( auto entry : list->entries ) {
+        for( auto entry = list->entries.begin(); entry != list->entries.end(); entry++ ) {
             outFile << "<li> ";
-            writeDocumentParts(outFile, entry.text, isGenerated);
+            writeDocumentParts(outFile, {*entry}, isGenerated);
+            if( entry == list->entries.end()-1 ) {
+                if( start +1 != documentParts.end() && (start+1)->type() == DocumentPart::Type::List && (start+1)->list()->level > currentLevel ) {
+                    start++;
+                    writeList(outFile, start, documentParts, isGenerated, currentLevel);
+                }
+            }
             outFile << " </li>" << std::endl;
         }
     }
