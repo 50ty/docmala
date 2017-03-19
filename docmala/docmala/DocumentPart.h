@@ -40,8 +40,8 @@ public:
         std::string value;
     };
 
-    struct Table {
-        Table() {}
+    struct Table : public VisualElement {
+        Table(int lineNumber) : VisualElement(lineNumber) {}
 
         struct Cell {
             std::vector<DocumentPart> content;

@@ -18,6 +18,11 @@ hue-6-2: #c18401
 
 */
 
+pre {
+    margin-top: -1em;
+    margin-bottom: -1em;
+}
+
 .hljs {
   display: block;
   overflow-x: auto;

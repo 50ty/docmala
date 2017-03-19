@@ -30,6 +30,8 @@ namespace docmala {
 
         unsigned int _imageCounter = 1;
         unsigned int _figureCounter = 1;
+        unsigned int _listingCounter = 1;
+        unsigned int _tableCounter = 1;
         std::string _nameBase = "outfile";
         bool _embedImages = false;
     };

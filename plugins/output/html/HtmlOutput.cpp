@@ -186,7 +186,7 @@ void writeCode(std::stringstream &outFile, const DocumentPart::Code *code)
     replaceAll(cde, "<", "&lt;");
     replaceAll(cde, ">", "&gt;");
 
-    outFile << cde << std::endl;
+    outFile << cde;
     outFile << "</code> </pre>" << std::endl;
 
 }
@@ -391,7 +391,21 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const std::vecto
         case DocumentPart::Type::Code: {
             auto code = part->code();
 
+            outFile << "<figure"<<id(code)<<">" << std::endl;
             writeCode(outFile, code);
+            if( previous->type() == DocumentPart::Type::Caption ) {
+                outFile << "<figcaption>Listing " << _listingCounter << ": ";
+                if( !isGenerated ) {
+                    outFile << "<span " << id(previous->caption()) << ">";
+                }
+                writeDocumentParts(outFile, previous->caption()->text, isGenerated );
+                if( !isGenerated ) {
+                    outFile << "</span>" << std::endl;
+                }
+                outFile << "</figcaption>" << std::endl;
+                _listingCounter++;
+            }
+            outFile << "</figure>" << std::endl;
             break;
         }
         case DocumentPart::Type::Anchor: {
@@ -418,7 +432,22 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const std::vecto
             break;
         }
         case DocumentPart::Type::Table: {
-            writeTable(outFile, part->table());
+            auto table = part->table();
+            outFile << "<figure"<<id(table)<<">" << std::endl;
+            writeTable(outFile, table);
+            if( previous->type() == DocumentPart::Type::Caption ) {
+                outFile << "<figcaption>Table " << _tableCounter << ": ";
+                if( !isGenerated ) {
+                    outFile << "<span " << id(previous->caption()) << ">";
+                }
+                writeDocumentParts(outFile, previous->caption()->text, isGenerated );
+                if( !isGenerated ) {
+                    outFile << "</span>" << std::endl;
+                }
+                outFile << "</figcaption>" << std::endl;
+                _tableCounter++;
+            }
+            outFile << "</figure>" << std::endl;
             break;
         }
         default:
