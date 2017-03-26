@@ -29,10 +29,10 @@ public:
     };
 
     struct VisualElement {
-        VisualElement(int lineNumber)
-            : line(lineNumber)
+        VisualElement(const FileLocation &location)
+            : location(location)
         {}
-        int line;
+        FileLocation location;
     };
 
     struct KeyValuePair {
@@ -41,7 +41,7 @@ public:
     };
 
     struct Table : public VisualElement {
-        Table(int lineNumber) : VisualElement(lineNumber) {}
+        Table(const FileLocation &location) : VisualElement(location) {}
 
         struct Cell {
             std::vector<DocumentPart> content;
@@ -80,7 +80,7 @@ public:
     };
 
     struct Code : public VisualElement {
-        Code(int lineNumber) : VisualElement(lineNumber) {}
+        Code(const FileLocation &location) : VisualElement(location) {}
         std::string code;
         std::string type;
     };
@@ -100,18 +100,18 @@ public:
     };
 
     struct GeneratedDocument : public VisualElement {
-        GeneratedDocument( int lineNumber ) : VisualElement(lineNumber) {}
+        GeneratedDocument( const FileLocation &location ) : VisualElement(location) {}
         std::vector<DocumentPart> document;
     };
 
     struct Text : public VisualElement {
-        Text(int lineNumber = -1) : VisualElement(lineNumber) {}
+        Text(const FileLocation &location = FileLocation()) : VisualElement(location) {}
 
         std::vector<DocumentPart> text;
     };
 
     struct Headline : public Text {
-        Headline() : Text(-1) {}
+        Headline() : Text() {}
         Headline(const Text& text, int level)
             : Text(text)
             , level(level)

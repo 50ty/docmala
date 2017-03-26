@@ -3,6 +3,7 @@
 #include "HtmlOutput_global.h"
 #include <vector>
 #include <string>
+#include <map>
 #include <docmala/Document.h>
 #include <docmala/Parameter.h>
 
@@ -20,6 +21,8 @@ namespace docmala {
         HtmlDocument produceHtml(const ParameterList &parameters, const Document &document, const std::string& scripts = "");
 
     private:
+        void prepare(const std::vector<DocumentPart> &documentParts);
+
         void writeDocumentParts(std::stringstream &outFile,
                                 const std::vector<DocumentPart> &documentParts,
                                 bool isGenerated = false);
@@ -32,8 +35,18 @@ namespace docmala {
         unsigned int _figureCounter = 1;
         unsigned int _listingCounter = 1;
         unsigned int _tableCounter = 1;
+        int _headlineLevels[32] = {0};
+
         std::string _nameBase = "outfile";
         bool _embedImages = false;
+
+        struct TitleData {
+            std::string id;
+            DocumentPart::Text text;
+        };
+
+        std::map<std::string, TitleData> _anchorData;
+        std::map<FileLocation, TitleData> _titleData;
     };
 
 }

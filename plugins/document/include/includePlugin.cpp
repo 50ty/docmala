@@ -48,7 +48,7 @@ void IncludePlugin::updateDocumentParts(const std::string &identifier, DocumentP
             out.document.push_back(anchor);
         } else if( part.type() == DocumentPart::Type::GeneratedDocument ){
             auto generated = part.generatedDocument();
-            DocumentPart::GeneratedDocument outDoc(0);
+            DocumentPart::GeneratedDocument outDoc(part.generatedDocument()->location);
             updateDocumentParts(identifier,  outDoc, generated->document, keepHeadlineLevel, currentLevel);
             out.document.push_back(outDoc);
         } else {
@@ -112,7 +112,7 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
     _errors = parser->errors();
     auto doc = parser->document();
     int baseLevel = 1;
-    DocumentPart::GeneratedDocument generated(location.line);
+    DocumentPart::GeneratedDocument generated(location);
 
 
     if( !keepHeadlineLevel ) {

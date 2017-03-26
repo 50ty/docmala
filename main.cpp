@@ -68,6 +68,7 @@ int main(int argc, char *argv[])
     }
 
     parameters.insert(std::make_pair("outputdir", docmala::Parameter{"outputdir", outputDir, docmala::FileLocation()} ));
+    docmala.setParameters(parameters);
     docmala.parseFile(inputFile);
 
     for( const auto &error : docmala.errors() ) {

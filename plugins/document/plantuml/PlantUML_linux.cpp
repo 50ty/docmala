@@ -127,7 +127,7 @@ bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation
 
     if( cachePosition != _cache.end() ) {
         DocumentPart::Image image = cachePosition->second;
-        image.line = location.line;
+        image.location = location;
         document.addPart( image );
         return true;
     }
@@ -163,7 +163,7 @@ bool PlantUMLPlugin::process(const ParameterList &parameters, const FileLocation
             break;
     }
 
-    DocumentPart::Text text(location.line);
+    DocumentPart::Text text(location);
     DocumentPart::Image image("svg+xml", "svg", imageData, text);
     document.addPart( image );
 

@@ -98,6 +98,17 @@ Links may be to internet addresses:
 within a document:
 * ''\<<ref1>>'' links to a reference defined by ''\[[ref1]]'': <<ref1>>
 * ''\<<ref1, see there>>'' produces: <<ref1, see there>>.
+In links to images, tables, listings and headlines, one has access to the id and text of a refenced element:
+* ''\<<ref_uml, #>>'' produces: <<ref_uml, #>>.
+* ''\<<ref_uml, *>>'' produces: <<ref_uml, *>>.
+* ''\<<ref_uml, #*>>'' produces: <<ref_uml, #*>>.
+
+Links to headlines, figures, tables and listings:
+* ''\<<ref1, #>>'' produces: <<ref1, #>>.
+* ''\<<ref1, *>>'' produces: <<ref1, *>>.
+* ''\<<ref1, #*>>'' produces: <<ref1, #*>>.
+
+* ''\<<column_spans, *>>'' produces: <<column_spans, *>>.
 
 or even between documents:
 * ''\<<testInclude.dml:ref1>>'' links to a reference defined by ''\[[ref1]]''in the documument ''testInclude.dml''
@@ -208,6 +219,9 @@ row2 ||  2,1 | 2,2  | 2,3
 row3 ||  3,1 | 3,2  | 3,3
 ----
 
+[[column_spans]]
+.Column Spans
+
 Column-spans are defined using a ''+0:x'' behind the ''|'' separator:
 
 [code, type=text]
@@ -263,6 +277,8 @@ Docma uses plantuml to draw uml diagrams:
 .Example code for a UML diagram
 [code, type=text]
 ----
+[[ref_uml]]
+.Example for a //UML// **diagram**
 [plantuml]
 \----
   interface Interface
@@ -275,7 +291,8 @@ Docma uses plantuml to draw uml diagrams:
 \----
 ----
 
-.Example for a UML diagram
+[[ref_uml]]
+.Example for a //UML// **diagram**
 [plantuml]
 ----
   interface Interface

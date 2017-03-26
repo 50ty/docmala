@@ -109,7 +109,7 @@ bool TablePlugin::process(const ParameterList &parameters, const FileLocation &l
     _errors.clear();
     _file.reset( new MemoryFile(block, location.fileName) );
 
-    DocumentPart::Table table(location.line);
+    DocumentPart::Table table(location);
     table.cells.push_back( std::vector<DocumentPart::Table::Cell>() );
 
     std::string spanModifier;

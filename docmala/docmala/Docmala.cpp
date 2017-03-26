@@ -516,6 +516,9 @@ bool Docmala::readLink(IFile *file, std::vector<Error> &errors, DocumentPart::Te
                 data.push_back(c);
             }
         } else if( mode == Mode::Text ) {
+            if( text.empty() && isWhitespace(c) ) {
+                continue;
+            }
             if( c == '>' ) {
                 if( text.empty() ) {
                     errors.push_back(Error{file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty.") });
@@ -902,7 +905,7 @@ bool Docmala::readText(IFile *file, std::vector<Error> &errors, char startCharac
         c = file->getch();
     }
 
-    text.line = file->location().line;
+    text.location = file->location();
     while( true ) {
         if( isFormatSpecifier(c) ) {
             const char following = file->following();
