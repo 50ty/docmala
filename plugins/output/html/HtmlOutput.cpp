@@ -529,7 +529,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream &outFile, const std::vecto
                         if( titleData.id.back() != '.') {
                             outFile << ":";
                         }
-                        outFile << ": ";
+                        outFile << " ";
                     }
                 }
 
