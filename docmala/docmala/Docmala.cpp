@@ -8,38 +8,32 @@ using namespace docmala;
 
 Docmala::Docmala(const std::string& pluginDir)
     : _pluginLoader(new extension_system::ExtensionSystem())
-    , _pluginDir(pluginDir)
-{
+    , _pluginDir(pluginDir) {
     _pluginLoader->searchDirectory(pluginDir, false);
 }
 
 Docmala::Docmala(const Document other, const std::string& pluginDir)
-    : Docmala(pluginDir)
-{
+    : Docmala(pluginDir) {
     _document.inheritFrom(other);
 }
 
 Docmala::~Docmala() {}
 
-void Docmala::setParameters(const ParameterList& parameters)
-{
+void Docmala::setParameters(const ParameterList& parameters) {
     _parameters = parameters;
 }
 
-bool Docmala::parseFile(const std::string& fileName)
-{
+bool Docmala::parseFile(const std::string& fileName) {
     _file.reset(new File(fileName));
     return parse();
 }
 
-bool Docmala::parseData(const std::string& data, const std::string& fileName)
-{
+bool Docmala::parseData(const std::string& data, const std::string& fileName) {
     _file.reset(new MemoryFile(data, fileName));
     return parse();
 }
 
-bool Docmala::produceOutput(const std::string& pluginName)
-{
+bool Docmala::produceOutput(const std::string& pluginName) {
     auto plugin = _pluginLoader->createExtension<OutputPlugin>(pluginName);
 
     if (plugin) {
@@ -51,8 +45,7 @@ bool Docmala::produceOutput(const std::string& pluginName)
     return true;
 }
 
-bool Docmala::produceOutput(std::shared_ptr<OutputPlugin> plugin)
-{
+bool Docmala::produceOutput(std::shared_ptr<OutputPlugin> plugin) {
     if (plugin) {
         ParameterList parameters = _parameters;
 
@@ -63,8 +56,7 @@ bool Docmala::produceOutput(std::shared_ptr<OutputPlugin> plugin)
     return false;
 }
 
-std::vector<std::string> Docmala::listOutputPlugins() const
-{
+std::vector<std::string> Docmala::listOutputPlugins() const {
     auto                     plugins = _pluginLoader->extensions<OutputPlugin>();
     std::vector<std::string> knownOutputPlugins;
 
@@ -75,8 +67,7 @@ std::vector<std::string> Docmala::listOutputPlugins() const
     return knownOutputPlugins;
 }
 
-void Docmala::readComment()
-{
+void Docmala::readComment() {
     while (!_file->isEoF()) {
         char c = _file->getch();
         if (c == '\n') {
@@ -85,8 +76,7 @@ void Docmala::readComment()
     }
 }
 
-bool Docmala::parse()
-{
+bool Docmala::parse() {
     _document.clear();
     _errors.clear();
     _registeredPostprocessing.clear();
@@ -96,10 +86,7 @@ bool Docmala::parse()
         return false;
     }
 
-    enum class Mode
-    {
-        BeginOfLine
-    } mode{Mode::BeginOfLine};
+    enum class Mode { BeginOfLine } mode{Mode::BeginOfLine};
 
     while (!_file->isEoF()) {
         char c = _file->getch();
@@ -167,8 +154,7 @@ bool Docmala::parse()
     return true;
 }
 
-void Docmala::doPostprocessing()
-{
+void Docmala::doPostprocessing() {
     bool documentChanged = true;
     while (documentChanged) {
         documentChanged = false;
@@ -193,8 +179,7 @@ void Docmala::doPostprocessing()
     postProcessPartList(_document.parts());
 }
 
-void Docmala::postProcessPartList(const std::vector<DocumentPart>& parts)
-{
+void Docmala::postProcessPartList(const std::vector<DocumentPart>& parts) {
     for (auto part : parts) {
         if (part.type() == DocumentPart::Type::Anchor) {
             auto prevAnchor = _document.anchors().find(part.anchor()->name);
@@ -219,8 +204,7 @@ void Docmala::postProcessPartList(const std::vector<DocumentPart>& parts)
     }
 }
 
-void Docmala::checkConsistency()
-{
+void Docmala::checkConsistency() {
     for (const auto& part : _document.parts()) {
         if (part.type() == DocumentPart::Type::Link) {
             auto link = part.link();
@@ -233,8 +217,7 @@ void Docmala::checkConsistency()
     }
 }
 
-bool Docmala::readHeadLine()
-{
+bool Docmala::readHeadLine() {
     int level = 1;
     while (!_file->isEoF()) {
         char c = _file->getch();
@@ -261,8 +244,7 @@ bool Docmala::readHeadLine()
     return false;
 }
 
-bool Docmala::readCaption()
-{
+bool Docmala::readCaption() {
     DocumentPart::Text text;
     if (!readText('\0', text))
         return false;
@@ -270,8 +252,7 @@ bool Docmala::readCaption()
     return true;
 }
 
-bool Docmala::readLine(std::string& destination)
-{
+bool Docmala::readLine(std::string& destination) {
     while (!_file->isEoF()) {
         char c = _file->getch();
         if (c == '\n') {
@@ -282,14 +263,8 @@ bool Docmala::readLine(std::string& destination)
     return true;
 }
 
-bool Docmala::readPlugin()
-{
-    enum class Mode
-    {
-        Begin,
-        ParameterName,
-        SkipUntilNewLine
-    } mode{Mode::Begin};
+bool Docmala::readPlugin() {
+    enum class Mode { Begin, ParameterName, SkipUntilNewLine } mode{Mode::Begin};
 
     FileLocation  nameBegin;
     std::string   name;
@@ -394,15 +369,8 @@ bool Docmala::readPlugin()
     return true;
 }
 
-bool Docmala::readAnchor(IFile* _file, std::vector<Error>& _errors, DocumentPart::Text& outText)
-{
-    enum class Mode
-    {
-        Begin,
-        Name,
-        EndTag1,
-        EndTag2
-    } mode{Mode::Begin};
+bool Docmala::readAnchor(IFile* _file, std::vector<Error>& _errors, DocumentPart::Text& outText) {
+    enum class Mode { Begin, Name, EndTag1, EndTag2 } mode{Mode::Begin};
 
     std::string name;
     auto        anchorLocation = _file->location();
@@ -462,21 +430,12 @@ bool Docmala::readAnchor(IFile* _file, std::vector<Error>& _errors, DocumentPart
     return false;
 }
 
-bool Docmala::readLink(DocumentPart::Text& outText)
-{
+bool Docmala::readLink(DocumentPart::Text& outText) {
     return readLink(_file.get(), _errors, outText);
 }
 
-bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText)
-{
-    enum class Mode
-    {
-        Begin,
-        Data,
-        Text,
-        EndTag1,
-        EndTag2
-    } mode{Mode::Begin};
+bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText) {
+    enum class Mode { Begin, Data, Text, EndTag1, EndTag2 } mode{Mode::Begin};
 
     std::string text;
     std::string data;
@@ -565,15 +524,8 @@ bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Te
     return false;
 }
 
-bool Docmala::readMetaData()
-{
-    enum class Mode
-    {
-        ParameterName,
-        EndOrAssign,
-        ParameterValue,
-        SkipUntilNewLine
-    } mode{Mode::ParameterName};
+bool Docmala::readMetaData() {
+    enum class Mode { ParameterName, EndOrAssign, ParameterValue, SkipUntilNewLine } mode{Mode::ParameterName};
 
     MetaData metaData;
     bool     skipWarningPrinted = false;
@@ -682,8 +634,7 @@ bool Docmala::readMetaData()
     return false;
 }
 
-bool isFormatSpecifier(char c)
-{
+bool isFormatSpecifier(char c) {
     return c == '_' || c == '*' || c == '-' || c == '/' || c == '\'';
 }
 
@@ -799,8 +750,7 @@ bool isFormatSpecifier(char c)
 //    return true;
 //}
 
-bool Docmala::readText(char startCharacter, DocumentPart::Text& text)
-{
+bool Docmala::readText(char startCharacter, DocumentPart::Text& text) {
     return readText(_file.get(), _errors, startCharacter, text);
     /*    char c = startCharacter;
         DocumentPart::FormatedText formatedText;
@@ -898,8 +848,7 @@ bool Docmala::readText(char startCharacter, DocumentPart::Text& text)
         */
 }
 
-bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharacter, DocumentPart::Text& text)
-{
+bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharacter, DocumentPart::Text& text) {
     char                       c = startCharacter;
     DocumentPart::FormatedText formatedText;
 
@@ -995,21 +944,10 @@ bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharac
     return true;
 }
 
-bool Docmala::readParameterList(ParameterList& parameters, char blockEnd)
-{
-    enum class Mode
-    {
-        ParameterName,
-        EndOrEquals,
-        ParameterValue,
-        EndOrNext
-    } mode{Mode::ParameterName};
+bool Docmala::readParameterList(ParameterList& parameters, char blockEnd) {
+    enum class Mode { ParameterName, EndOrEquals, ParameterValue, EndOrNext } mode{Mode::ParameterName};
 
-    enum class ValueMode
-    {
-        Normal,
-        Extended
-    } valueMode{ValueMode::Normal};
+    enum class ValueMode { Normal, Extended } valueMode{ValueMode::Normal};
 
     Parameter parameter;
 
@@ -1170,8 +1108,7 @@ bool Docmala::readParameterList(ParameterList& parameters, char blockEnd)
     return false;
 }
 
-bool Docmala::readBlock(std::string& block)
-{
+bool Docmala::readBlock(std::string& block) {
     const std::string delimiter = "----";
 
     std::string potentialDelimiter;
@@ -1224,8 +1161,7 @@ bool Docmala::readBlock(std::string& block)
     return false;
 }
 
-bool Docmala::readList(DocumentPart::List::Type type)
-{
+bool Docmala::readList(DocumentPart::List::Type type) {
     int level = 1;
 
     while (!_file->isEoF()) {
@@ -1253,7 +1189,6 @@ bool Docmala::readList(DocumentPart::List::Type type)
     return false;
 }
 
-bool Docmala::isWhitespace(char c, bool allowEndline)
-{
+bool Docmala::isWhitespace(char c, bool allowEndline) {
     return c == ' ' || c == '\t' || (allowEndline && (c == '\n' || c == '\0'));
 }

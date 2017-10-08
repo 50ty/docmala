@@ -10,29 +10,28 @@ class ImagePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
+    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
-    const std::vector<Error> lastErrors() const override {return _errors;}
+    const std::vector<Error> lastErrors() const override {
+        return _errors;
+    }
 
-    std::vector<Error> _errors;
+    std::vector<Error>                                   _errors;
     std::unordered_map<std::string, DocumentPart::Image> _cache;
-
 };
-
 
 DocumentPlugin::BlockProcessing ImagePlugin::blockProcessing() const {
     return BlockProcessing::No;
 }
 
-bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
-{
+bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     (void)block;
 
     _errors.clear();
     std::string inputFile;
 
     auto inFileIter = parameters.find("inputFile");
-    if( inFileIter != parameters.end() ) {
+    if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'inputFile' is missing."});
@@ -42,8 +41,8 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
     std::string baseDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
 
     std::string fileName;
-    auto fileNameIter = parameters.find("file");
-    if( fileNameIter != parameters.end() ) {
+    auto        fileNameIter = parameters.find("file");
+    if (fileNameIter != parameters.end()) {
         fileName = baseDir + "/" + fileNameIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'file' is missing."});
@@ -51,9 +50,9 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
     }
 
     std::string fileExtension = "";
-    auto pos = fileName.find_last_of(".");
-    if( pos != std::string::npos ) {
-        fileExtension = fileName.substr(pos+1);
+    auto        pos           = fileName.find_last_of(".");
+    if (pos != std::string::npos) {
+        fileExtension = fileName.substr(pos + 1);
     } else {
         _errors.push_back({location, "Unable to determine file type."});
         return false;
@@ -62,10 +61,9 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
     std::string imageData;
 
     std::ifstream highlightReader(fileName, std::ios::in | std::ios::binary);
-    if (highlightReader)
-    {
+    if (highlightReader) {
         highlightReader.seekg(0, std::ios::end);
-        imageData.resize( static_cast<std::string::size_type>(highlightReader.tellg()));
+        imageData.resize(static_cast<std::string::size_type>(highlightReader.tellg()));
         highlightReader.seekg(0, std::ios::beg);
         highlightReader.read(&imageData[0], static_cast<std::streamsize>(imageData.size()));
         highlightReader.close();
@@ -75,8 +73,8 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
 
     std::string format = fileExtension;
 
-    if( format == "svg" ) {
-        if( imageData.find("<?xml") != std::string::npos ) {
+    if (format == "svg") {
+        if (imageData.find("<?xml") != std::string::npos) {
             format += "+xml";
         }
     }
@@ -85,9 +83,9 @@ bool ImagePlugin::process(const ParameterList &parameters, const FileLocation &l
     text.text.push_back({fileName});
     DocumentPart::Image image(format, fileExtension, imageData, text);
     _cache.insert(std::make_pair(block, image));
-    document.addPart( image );
+    document.addPart(image);
 
     return true;
 }
 
-EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, ImagePlugin, "image", 1, "Insert an image into the document", EXTENSION_SYSTEM_NO_USER_DATA )
+EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, ImagePlugin, "image", 1, "Insert an image into the document", EXTENSION_SYSTEM_NO_USER_DATA)

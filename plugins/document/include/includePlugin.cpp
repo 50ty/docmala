@@ -9,47 +9,53 @@ class IncludePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process( const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block) override;
+    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
     PostProcessing postProcessing() const override;
-    bool postProcess(const ParameterList &parameters, const FileLocation &location, Document &document) override;
+    bool           postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) override;
 
-    void escapeFileName(std::string &fileName) {
-        std::replace( fileName.begin(), fileName.end(), '.', '_');
+    void escapeFileName(std::string& fileName) {
+        std::replace(fileName.begin(), fileName.end(), '.', '_');
     }
 
-    const std::vector<Error> lastErrors() const override {return _errors;}
+    const std::vector<Error> lastErrors() const override {
+        return _errors;
+    }
 
-    std::vector<Error> _errors;
+    std::vector<Error>       _errors;
     std::unique_ptr<Docmala> parser;
-    void updateDocumentParts(const std::string &identifier, DocumentPart::GeneratedDocument &out, const std::vector<DocumentPart> &parts, bool keepHeadlineLevel, int baseLevel);
-    void postProcessParts(const std::string &identifier, std::vector<DocumentPart> &parts);
+    void                     updateDocumentParts(const std::string&               identifier,
+                                                 DocumentPart::GeneratedDocument& out,
+                                                 const std::vector<DocumentPart>& parts,
+                                                 bool                             keepHeadlineLevel,
+                                                 int                              baseLevel);
+    void                     postProcessParts(const std::string& identifier, std::vector<DocumentPart>& parts);
 };
-
 
 DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
     return BlockProcessing::No;
 }
 
-
-
-void IncludePlugin::updateDocumentParts(const std::string &identifier, DocumentPart::GeneratedDocument &out, const std::vector<DocumentPart> &parts, bool keepHeadlineLevel, int baseLevel)
-{
+void IncludePlugin::updateDocumentParts(const std::string&               identifier,
+                                        DocumentPart::GeneratedDocument& out,
+                                        const std::vector<DocumentPart>& parts,
+                                        bool                             keepHeadlineLevel,
+                                        int                              baseLevel) {
     int currentLevel = 0;
-    for( auto &part : parts ) {
-        if( !keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline) ) {
+    for (auto& part : parts) {
+        if (!keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline)) {
             DocumentPart::Headline headline = *part.headline();
             headline.level += baseLevel;
             out.document.push_back(headline);
             currentLevel = headline.level;
-        } else if( part.type() == DocumentPart::Type::Anchor) {
+        } else if (part.type() == DocumentPart::Type::Anchor) {
             auto anchor = *part.anchor();
             anchor.name = identifier + ":" + anchor.name;
             out.document.push_back(anchor);
-        } else if( part.type() == DocumentPart::Type::GeneratedDocument ){
-            auto generated = part.generatedDocument();
+        } else if (part.type() == DocumentPart::Type::GeneratedDocument) {
+            auto                            generated = part.generatedDocument();
             DocumentPart::GeneratedDocument outDoc(part.generatedDocument()->location);
-            updateDocumentParts(identifier,  outDoc, generated->document, keepHeadlineLevel, currentLevel);
+            updateDocumentParts(identifier, outDoc, generated->document, keepHeadlineLevel, currentLevel);
             out.document.push_back(outDoc);
         } else {
             out.document.push_back(part);
@@ -57,24 +63,23 @@ void IncludePlugin::updateDocumentParts(const std::string &identifier, DocumentP
     }
 }
 
-bool IncludePlugin::process(const ParameterList &parameters, const FileLocation &location, Document &document, const std::string &block)
-{
+bool IncludePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     (void)block;
 
     _errors.clear();
 
-    std::string pluginDir = "./plugins";
-    auto pluginDirIter = parameters.find("pluginDir");
-    if( pluginDirIter != parameters.end() ) {
-        pluginDir =  pluginDirIter->second.value + '/';
+    std::string pluginDir     = "./plugins";
+    auto        pluginDirIter = parameters.find("pluginDir");
+    if (pluginDirIter != parameters.end()) {
+        pluginDir = pluginDirIter->second.value + '/';
     }
 
     std::string includeFile;
     std::string inputFile;
-    bool keepHeadlineLevel = false;
+    bool        keepHeadlineLevel = false;
 
     auto inFileIter = parameters.find("inputFile");
-    if( inFileIter != parameters.end() ) {
+    if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'inputFile' is missing."});
@@ -85,39 +90,38 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
 
     auto includeFileIter = parameters.find("file");
 
-    if( includeFileIter != parameters.end() ) {
+    if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'file' is missing."});
         return false;
     }
 
-    std::string identifier = includeFile;
-    auto identifierIter = parameters.find("as");
+    std::string identifier     = includeFile;
+    auto        identifierIter = parameters.find("as");
 
-    if( identifierIter != parameters.end() ) {
+    if (identifierIter != parameters.end()) {
         identifier = identifierIter->second.value;
     }
 
-    if( parameters.find("keepHeadlineLevel") != parameters.end() ) {
+    if (parameters.find("keepHeadlineLevel") != parameters.end()) {
         keepHeadlineLevel = true;
     }
 
-    if( !parser ) {
+    if (!parser) {
         parser.reset(new Docmala(pluginDir));
     }
 
     parser->parseFile(baseDir + "/" + includeFile);
 
-    _errors = parser->errors();
-    auto doc = parser->document();
-    int baseLevel = 1;
+    _errors                                   = parser->errors();
+    auto                            doc       = parser->document();
+    int                             baseLevel = 1;
     DocumentPart::GeneratedDocument generated(location);
 
-
-    if( !keepHeadlineLevel ) {
-        for( auto iter = document.parts().rbegin(); iter != document.parts().rend(); iter++ ) {
-            if( iter->type() == DocumentPart::Type::Headline ) {
+    if (!keepHeadlineLevel) {
+        for (auto iter = document.parts().rbegin(); iter != document.parts().rend(); iter++) {
+            if (iter->type() == DocumentPart::Type::Headline) {
                 baseLevel = iter->headline()->level;
                 break;
             }
@@ -131,31 +135,29 @@ bool IncludePlugin::process(const ParameterList &parameters, const FileLocation 
     return true;
 }
 
-DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const
-{
+DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const {
     return PostProcessing::Once;
 }
 
-void IncludePlugin::postProcessParts(const std::string &identifier, std::vector<DocumentPart> &parts)
-{
-    for( auto &part : parts ) {
-        if( part.type() == DocumentPart::Type::Link ) {
+void IncludePlugin::postProcessParts(const std::string& identifier, std::vector<DocumentPart>& parts) {
+    for (auto& part : parts) {
+        if (part.type() == DocumentPart::Type::Link) {
             auto link = part.link();
 
-            if( link->type == DocumentPart::Link::Type::InterFile ) {
+            if (link->type == DocumentPart::Link::Type::InterFile) {
                 std::string fileName = link->data.substr(0, link->data.find(":"));
-                if( fileName == identifier ) {
+                if (fileName == identifier) {
                     link->type = DocumentPart::Link::Type::IntraFile;
                 }
             }
-        } else if( part.generatedDocument() ) {
+        } else if (part.generatedDocument()) {
             postProcessParts(identifier, part.generatedDocument()->document);
-        } else if( part.text() ) {
+        } else if (part.text()) {
             postProcessParts(identifier, part.text()->text);
-        } else if( part.table() ) {
+        } else if (part.table()) {
             auto table = part.table();
-            for( auto row : table->cells ) {
-                for( auto cell : row ) {
+            for (auto row : table->cells) {
+                for (auto cell : row) {
                     postProcessParts(identifier, cell.content);
                 }
             }
@@ -163,15 +165,14 @@ void IncludePlugin::postProcessParts(const std::string &identifier, std::vector<
     }
 }
 
-bool IncludePlugin::postProcess(const ParameterList &parameters, const FileLocation &location, Document &document)
-{
+bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) {
     _errors.clear();
 
     std::string includeFile;
     std::string inputFile;
 
     auto inFileIter = parameters.find("inputFile");
-    if( inFileIter != parameters.end() ) {
+    if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'inputFile' is missing."});
@@ -182,23 +183,22 @@ bool IncludePlugin::postProcess(const ParameterList &parameters, const FileLocat
 
     auto includeFileIter = parameters.find("file");
 
-    if( includeFileIter != parameters.end() ) {
+    if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
         _errors.push_back({location, "Parameter 'file' is missing."});
         return false;
     }
 
-    std::string identifier = includeFile;
-    auto identifierIter = parameters.find("as");
+    std::string identifier     = includeFile;
+    auto        identifierIter = parameters.find("as");
 
-    if( identifierIter != parameters.end() ) {
+    if (identifierIter != parameters.end()) {
         identifier = identifierIter->second.value;
     }
-
 
     postProcessParts(identifier, document.parts());
     return true;
 }
 
-EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, IncludePlugin, "include", 1, "Include a file into an other one", EXTENSION_SYSTEM_NO_USER_DATA )
+EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, IncludePlugin, "include", 1, "Include a file into an other one", EXTENSION_SYSTEM_NO_USER_DATA)
