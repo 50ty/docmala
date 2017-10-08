@@ -18,9 +18,9 @@
         You should have received a copy of the GNU Lesser General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <extension_system/Extension.hpp>
 #include <docmala/DocmaPlugin.h>
 #include <docmala/Error.h>
+#include <extension_system/Extension.hpp>
 #include <fstream>
 #include <unordered_map>
 
@@ -32,7 +32,7 @@ public:
     BlockProcessing blockProcessing() const override;
     bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
-    const std::vector<Error> lastErrors() const override {
+    std::vector<Error> lastErrors() const override {
         return _errors;
     }
 
@@ -54,7 +54,7 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'inputFile' is missing."});
+        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
         return false;
     }
 
@@ -65,16 +65,16 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     if (fileNameIter != parameters.end()) {
         fileName = baseDir + "/" + fileNameIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'file' is missing."});
+        _errors.emplace_back(location, "Parameter 'file' is missing.");
         return false;
     }
 
-    std::string fileExtension = "";
-    auto        pos           = fileName.find_last_of(".");
+    std::string fileExtension;
+    auto        pos = fileName.find_last_of('.');
     if (pos != std::string::npos) {
         fileExtension = fileName.substr(pos + 1);
     } else {
-        _errors.push_back({location, "Unable to determine file type."});
+        _errors.emplace_back(location, "Unable to determine file type.");
         return false;
     }
 
@@ -88,7 +88,7 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
         highlightReader.read(&imageData[0], static_cast<std::streamsize>(imageData.size()));
         highlightReader.close();
     } else {
-        _errors.push_back({location, "Unable to open file '" + fileName + "'."});
+        _errors.emplace_back(location, "Unable to open file '" + fileName + "'.");
     }
 
     std::string format = fileExtension;
@@ -100,7 +100,7 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     }
 
     DocumentPart::Text text;
-    text.text.push_back({fileName});
+    text.text.emplace_back(fileName);
     DocumentPart::Image image(format, fileExtension, imageData, text);
     _cache.insert(std::make_pair(block, image));
     document.addPart(image);

@@ -1,10 +1,6 @@
-
-#include_directories("../../ext/extension_system/src")
-
-
 add_library(documentPluginTable SHARED
                 "tablePlugin.cpp")
-                
+
 target_link_libraries(documentPluginTable docmala)
 
 set_target_properties(documentPluginTable PROPERTIES

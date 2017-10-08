@@ -1,10 +1,10 @@
 /**
-	@file
-	@copyright
-		Copyright Bernd Amend and Michael Adam 2014-2016
-		Distributed under the Boost Software License, Version 1.0.
-		(See accompanying file LICENSE_1_0.txt or copy at
-		http://www.boost.org/LICENSE_1_0.txt)
+    @file
+    @copyright
+        Copyright Bernd Amend and Michael Adam 2014-2017
+        Distributed under the Boost Software License, Version 1.0.
+        (See accompanying file LICENSE_1_0.txt or copy at
+        http://www.boost.org/LICENSE_1_0.txt)
 */
 #pragma once
 
@@ -17,71 +17,110 @@
 #include <extension_system/string.hpp>
 
 #ifdef EXTENSION_SYSTEM_USE_STD_FILESYSTEM
-	#include <filesystem>
-
-	namespace extension_system { namespace filesystem {
-		using namespace std::tr2::sys; // >=VS2012
-
-		path canonical(const path &p);
-		void forEachFileInDirectory(const path &p, const std::function<void(const path &p)> &func, bool recursive);
-	}}
+// clang-format off
+#if defined(EXTENSION_SYSTEM_COMPILER_MSVC) && EXTENSION_SYSTEM_COMPILER_VERSION >= 1700
+#include <filesystem>
+#elif __has_include(<filesystem>)
+#include <filesystem>
 #else
-	namespace extension_system { namespace filesystem {
-		class path
-		{
-		public:
-			path() {}
-			path(const path& p) { *this = p._pathname; }
-			path(const std::string& p) { *this = p; }
+#include <experimental/filesystem>
+#endif
 
-			path &operator=(const path& p) {
-				*this = p._pathname;
-				return *this;
-			}
-			path &operator=(const std::string& p) {
-				_pathname = p;
-				return *this;
-			}
+namespace extension_system {
+namespace filesystem {
+#if defined(EXTENSION_SYSTEM_COMPILER_MSVC) && EXTENSION_SYSTEM_COMPILER_VERSION >= 1700
+using namespace std::tr2::sys; // >=VS2012
+path canonical(const path& p);
+#elif __has_include(<experimental/filesystem>)
+using namespace std::experimental::filesystem;
+#else
+using namespace std::filesystem;
+#endif
+// clang-format on
 
-			const std::string string() const { return _pathname; }
-			const std::string generic_string() const { return _pathname; }
+void forEachFileInDirectory(const path& root, const std::function<void(const path& p)>& func, bool recursive);
+}
+}
+#else
+namespace extension_system {
+namespace filesystem {
+class path
+{
+public:
+    path() = default;
+    path(const path& p)
+    {
+        *this = p._pathname;
+    }
+    path(const char* p)
+    {
+        *this = std::string(p);
+    }
+    path(const std::string& p)
+    {
+        *this = p;
+    }
 
-			path filename() const {
-				path result;
-				split(_pathname, "/", [&](const std::string &str) {
-					result = str;
-					return true;
-				});
-				return result;
-			}
+    path& operator=(const path& p)
+    {
+        *this = p._pathname;
+        return *this;
+    }
+    path& operator=(const std::string& p)
+    {
+        _pathname = p;
+        return *this;
+    }
 
-			path extension() const {
-				const auto name = filename().string();
-				if(name == "." || name == "..")
-					return path();
-				const auto pos = name.find_last_of('.');
-				if(pos == std::string::npos)
-					return path();
-				return name.substr(pos);
-			}
+    const std::string string() const
+    {
+        return _pathname;
+    }
+    const std::string generic_string() const
+    {
+        return _pathname;
+    }
 
-			 path operator/(const std::string& rhs) const {
-				 return path(this->string() + "/" + rhs);
-			 }
+    path filename() const
+    {
+        path result;
+        split(_pathname, "/", [&](const std::string& str) {
+            result = str;
+            return true;
+        });
+        return result;
+    }
 
-			 path operator/(const path& rhs) const {
-				 return (*this) / rhs.string();
-			 }
+    path extension() const
+    {
+        const auto name = filename().string();
+        if (name == "." || name == "..")
+            return path();
+        const auto pos = name.find_last_of('.');
+        if (pos == std::string::npos)
+            return path();
+        return name.substr(pos);
+    }
 
-		private:
-			std::string _pathname;
-		};
+    path operator/(const std::string& rhs) const
+    {
+        return path(this->string() + "/" + rhs);
+    }
 
-		bool exists(const path &p);
-		bool is_directory(const path &p);
-		path canonical(const path &p);
+    path operator/(const path& rhs) const
+    {
+        return (*this) / rhs.string();
+    }
 
-		void forEachFileInDirectory(const path &p, const std::function<void(const filesystem::path &p)> &func, bool recursive);
+private:
+    std::string _pathname;
+};
 
-	}}
+bool exists(const path& p);
+bool is_directory(const path& p);
+path canonical(const path& p);
+
+void forEachFileInDirectory(const path& root, const std::function<void(const filesystem::path& p)>& func, bool recursive);
+}
+}
 #endif

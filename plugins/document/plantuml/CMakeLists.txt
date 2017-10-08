@@ -1,13 +1,9 @@
-
-include_directories("../../../ext/boost-process/include")
-
 add_library(documentPluginPlantUML SHARED
                 "PlantUML_linux.cpp"
                 "PlantUML_windows.cpp"
                 "DetectOS.h")
-                
-target_link_libraries(documentPluginPlantUML docmala)
 
+target_link_libraries(documentPluginPlantUML docmala)
 
 add_custom_command(
         TARGET documentPluginPlantUML POST_BUILD

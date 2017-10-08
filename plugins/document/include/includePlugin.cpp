@@ -18,10 +18,11 @@
         You should have received a copy of the GNU Lesser General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <extension_system/Extension.hpp>
+#include <algorithm>
 #include <docmala/DocmaPlugin.h>
 #include <docmala/Docmala.h>
-#include <algorithm>
+#include <extension_system/Extension.hpp>
+#include <memory>
 
 using namespace docmala;
 
@@ -34,11 +35,11 @@ public:
     PostProcessing postProcessing() const override;
     bool           postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) override;
 
-    void escapeFileName(std::string& fileName) {
+    static void escapeFileName(std::string& fileName) {
         std::replace(fileName.begin(), fileName.end(), '.', '_');
     }
 
-    const std::vector<Error> lastErrors() const override {
+    std::vector<Error> lastErrors() const override {
         return _errors;
     }
 
@@ -66,17 +67,17 @@ void IncludePlugin::updateDocumentParts(const std::string&               identif
         if (!keepHeadlineLevel && (part.type() == DocumentPart::Type::Headline)) {
             DocumentPart::Headline headline = *part.headline();
             headline.level += baseLevel;
-            out.document.push_back(headline);
+            out.document.emplace_back(headline);
             currentLevel = headline.level;
         } else if (part.type() == DocumentPart::Type::Anchor) {
             auto anchor = *part.anchor();
             anchor.name = identifier + ":" + anchor.name;
-            out.document.push_back(anchor);
+            out.document.emplace_back(anchor);
         } else if (part.type() == DocumentPart::Type::GeneratedDocument) {
             auto                            generated = part.generatedDocument();
             DocumentPart::GeneratedDocument outDoc(part.generatedDocument()->location);
             updateDocumentParts(identifier, outDoc, generated->document, keepHeadlineLevel, currentLevel);
-            out.document.push_back(outDoc);
+            out.document.emplace_back(outDoc);
         } else {
             out.document.push_back(part);
         }
@@ -102,7 +103,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'inputFile' is missing."});
+        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
         return false;
     }
 
@@ -113,7 +114,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
     if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'file' is missing."});
+        _errors.emplace_back(location, "Parameter 'file' is missing.");
         return false;
     }
 
@@ -129,7 +130,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
     }
 
     if (!parser) {
-        parser.reset(new Docmala(pluginDir));
+        parser = std::make_unique<Docmala>(pluginDir);
     }
 
     parser->parseFile(baseDir + "/" + includeFile);
@@ -165,7 +166,7 @@ void IncludePlugin::postProcessParts(const std::string& identifier, std::vector<
             auto link = part.link();
 
             if (link->type == DocumentPart::Link::Type::InterFile) {
-                std::string fileName = link->data.substr(0, link->data.find(":"));
+                std::string fileName = link->data.substr(0, link->data.find(':'));
                 if (fileName == identifier) {
                     link->type = DocumentPart::Link::Type::IntraFile;
                 }
@@ -195,7 +196,7 @@ bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocat
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'inputFile' is missing."});
+        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
         return false;
     }
 
@@ -206,7 +207,7 @@ bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocat
     if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
-        _errors.push_back({location, "Parameter 'file' is missing."});
+        _errors.emplace_back(location, "Parameter 'file' is missing.");
         return false;
     }
 

@@ -18,8 +18,8 @@
         You should have received a copy of the GNU Lesser General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <extension_system/Extension.hpp>
 #include <docmala/DocmaPlugin.h>
+#include <extension_system/Extension.hpp>
 
 using namespace docmala;
 

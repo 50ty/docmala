@@ -27,82 +27,83 @@
 #include <docmala/Docmala.h>
 
 using namespace std;
+namespace po = boost::program_options;
 
 int main(int argc, char* argv[]) {
-    boost::program_options::options_description desc("Documentation Markup Language");
-    desc.add_options()("help", "produce this help message")("input,i", boost::program_options::value<std::string>(), "input file")(
-        "outputdir,o",
-        boost::program_options::value<std::string>(),
-        "output directory")("outputplugins,p", boost::program_options::value<std::vector<std::string>>(), "plugins for output generation")(
-        "parameters",
-        boost::program_options::value<std::vector<std::string>>()->multitoken(),
-        "parameters for plugins in form [key]=[value] or [key] for flags")("listoutputplugins,l", "print a list of output plugins");
+    po::options_description desc("Documentation Markup Language");
+    desc.add_options()("help", "produce this help message") //
+        ("input,i", po::value<string>(), "input file") //
+        ("outputdir,o", po::value<string>(), "output directory") //
+        ("outputplugins,p", po::value<vector<string>>(), "plugins for output generation") //
+        ("parameters",
+         po::value<vector<string>>()->multitoken(),
+         "parameters for plugins in form [key]=[value] or [key] for flags")("listoutputplugins,l", "print a list of output plugins");
 
-    boost::program_options::variables_map vm;
-    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
-    boost::program_options::notify(vm);
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
 
-    if (vm.count("help")) {
-        std::cout << desc << "\n";
+    if (vm.count("help") != 0u) {
+        cout << desc << "\n";
         return 0;
     }
 
     docmala::Docmala       docmala;
     docmala::ParameterList parameters;
 
-    if (vm.count("listoutputplugins")) {
-        for (auto plugin : docmala.listOutputPlugins())
-            std::cout << plugin << "\n";
+    if (vm.count("listoutputplugins") != 0u) {
+        for (const auto& plugin : docmala.listOutputPlugins()) {
+            cout << plugin << "\n";
+}
         return 0;
     }
 
-    std::string outputDir;
-    std::string inputFile;
+    string outputDir;
+    string inputFile;
 
-    if (vm.count("input")) {
-        inputFile = vm["input"].as<std::string>();
+    if (vm.count("input") != 0u) {
+        inputFile = vm["input"].as<string>();
     } else {
-        std::cout << "An input file has to be specified\n";
+        cout << "An input file has to be specified\n";
         return 1;
     }
 
-    if (vm.count("outputdir")) {
-        outputDir = vm["outputdir"].as<std::string>();
+    if (vm.count("outputdir") != 0u) {
+        outputDir = vm["outputdir"].as<string>();
     } else {
         outputDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
     }
 
-    if (vm.count("parameters")) {
-        for (auto parameter : vm["parameters"].as<std::vector<std::string>>()) {
+    if (vm.count("parameters") != 0u) {
+        for (auto parameter : vm["parameters"].as<vector<string>>()) {
             auto equalsLocation = parameter.find_first_of('=');
-            if (equalsLocation != std::string::npos) {
-                std::string key   = parameter.substr(0, equalsLocation);
-                std::string value = parameter.substr(equalsLocation + 1);
-                parameters.insert(std::make_pair(key, docmala::Parameter{key, value, docmala::FileLocation()}));
+            if (equalsLocation != string::npos) {
+                string key   = parameter.substr(0, equalsLocation);
+                string value = parameter.substr(equalsLocation + 1);
+                parameters.insert(make_pair(key, docmala::Parameter{key, value, docmala::FileLocation()}));
             } else {
-                parameters.insert(std::make_pair(parameter, docmala::Parameter{parameter, "", docmala::FileLocation()}));
+                parameters.insert(make_pair(parameter, docmala::Parameter{parameter, "", docmala::FileLocation()}));
             }
         }
     }
 
-    parameters.insert(std::make_pair("outputdir", docmala::Parameter{"outputdir", outputDir, docmala::FileLocation()}));
+    parameters.emplace(make_pair("outputdir", docmala::Parameter{"outputdir", outputDir, docmala::FileLocation()}));
     docmala.setParameters(parameters);
     docmala.parseFile(inputFile);
 
     for (const auto& error : docmala.errors()) {
-        std::cout << error.location.fileName << "(" << error.location.line << ":" << error.location.column << "): " << error.message
-                  << std::endl;
+        cout << error.location.fileName << "(" << error.location.line << ":" << error.location.column << "): " << error.message << "\n";
     }
 
-    if (vm.count("outputplugins")) {
-        for (auto plugin : vm["outputplugins"].as<std::vector<std::string>>()) {
+    if (vm.count("outputplugins") != 0u) {
+        for (const auto& plugin : vm["outputplugins"].as<vector<string>>()) {
             if (!docmala.produceOutput(plugin)) {
-                std::cout << "Unable to create output for plugin: " << plugin << "\n";
+                cout << "Unable to create output for plugin: " << plugin << "\n";
                 return -1;
             }
         }
     } else {
-        std::cout << "No output plugin specified. No output is generated.\n";
+        cout << "No output plugin specified. No output is generated.\n";
         return -1;
     }
 

@@ -42,7 +42,7 @@ class OutputPlugin;
 class DOCMALA_API Docmala {
 public:
     Docmala(const std::string& pluginDir = "./");
-    Docmala(const Document other, const std::string& pluginDir = "./");
+    Docmala(const Document& other, const std::string& pluginDir = "./");
     ~Docmala();
 
     void setParameters(const ParameterList& parameters);
@@ -50,7 +50,7 @@ public:
     bool parseData(const std::string& data, const std::string& fileName = "");
 
     bool produceOutput(const std::string& pluginName);
-    bool produceOutput(std::shared_ptr<OutputPlugin> plugin);
+    bool produceOutput(const std::shared_ptr<OutputPlugin>& plugin);
 
     std::vector<std::string> listOutputPlugins() const;
 

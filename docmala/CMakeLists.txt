@@ -1,7 +1,3 @@
-
-include_directories("../ext/extension_system/src")
-
-
 set( DOCMALA_PUBLIC_HEADERS
                 "docmala/docmala_global.h"
                 "docmala/Docmala.h"
@@ -18,8 +14,9 @@ add_library(docmala SHARED
                 ${DOCMALA_PUBLIC_HEADERS}
                 "docmala/Docmala.cpp"
                 "docmala/File.cpp" )
-                
+
 set_target_properties(docmala PROPERTIES PUBLIC_HEADER "${DOCMALA_PUBLIC_HEADERS}")
+set_target_properties(docmala PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_SOURCE_DIR}")
 
 target_link_libraries(docmala extension_system)
 
