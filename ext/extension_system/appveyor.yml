@@ -1,0 +1,41 @@
+shallow_clone: true
+
+platform:
+  - Win32
+  - x64
+
+image:
+  - Visual Studio 2017
+
+environment:
+  matrix:
+    - VS_VERSION: Visual Studio 15 2017
+    - VS_VERSION: Visual Studio 15 2017
+      BOOST_ROOT: C:/Libraries/boost_1_64_0
+
+    - VS_VERSION: Visual Studio 14 2015
+
+before_build:
+  - ps: |
+      mkdir build
+      cd build
+
+      if($env:BOOST_ROOT -eq "") {
+          cmake .. -G "$env:generator" -A "$env:PLATFORM"
+      } else {
+          cmake .. -G "$env:VS_VERSION" -A "$env:PLATFORM" -DBOOST_ROOT="$env:BOOST_ROOT"
+      }
+
+build_script:
+  - cmake --build . --config Release
+
+test_script:
+  - ctest -j2
+
+on_finish:
+  - ps: |
+      # upload results to AppVeyor
+      $wc = New-Object 'System.Net.WebClient'
+      $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\juint.xml))
+
+deploy: off
