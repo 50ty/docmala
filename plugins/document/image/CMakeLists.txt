@@ -1,6 +1,6 @@
 add_library(documentPluginImage SHARED
                 "imagePlugin.cpp")
-                
+
 target_link_libraries(documentPluginImage docmala)
 
 set_target_properties(documentPluginImage PROPERTIES

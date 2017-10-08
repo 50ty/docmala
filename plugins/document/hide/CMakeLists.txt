@@ -1,10 +1,6 @@
-
-#include_directories("../../ext/extension_system/src")
-
-
 add_library(documentPluginHide SHARED
                 "hidePlugin.cpp")
-                
+
 target_link_libraries(documentPluginHide docmala)
 
 set_target_properties(documentPluginHide PROPERTIES
