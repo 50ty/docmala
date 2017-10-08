@@ -1,0 +1,1 @@
+# docmala [![Build Status](https://travis-ci.org/michaeladam3010/docmala.svg?branch=master)](https://travis-ci.org/michaeladam3010/docmala) [![Build status](https://ci.appveyor.com/api/projects/status/5cydq9lah0bj2d0m/branch/master?svg=true)](https://ci.appveyor.com/project/tptb/extension-system/branch/master)
