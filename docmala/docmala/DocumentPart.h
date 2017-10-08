@@ -6,7 +6,6 @@
 #include <boost/variant/get.hpp>
 #include "FileLocation.h"
 
-
 namespace docmala {
 
 class DocumentPart {
@@ -29,9 +28,8 @@ public:
     };
 
     struct VisualElement {
-        VisualElement(const FileLocation &location)
-            : location(location)
-        {}
+        VisualElement(const FileLocation& location)
+            : location(location) {}
         FileLocation location;
     };
 
@@ -41,110 +39,100 @@ public:
     };
 
     struct Table : public VisualElement {
-        Table(const FileLocation &location) : VisualElement(location) {}
+        Table(const FileLocation& location)
+            : VisualElement(location) {}
 
         struct Cell {
             std::vector<DocumentPart> content;
 
-            size_t columnSpan = 0;
-            size_t rowSpan = 0;
-            bool isHeading = false;
-            bool isHiddenBySpan = false;
+            size_t columnSpan     = 0;
+            size_t rowSpan        = 0;
+            bool   isHeading      = false;
+            bool   isHiddenBySpan = false;
         };
 
-        size_t columns = 0;
-        size_t rows = 0;
-        std::vector< std::vector<Cell> > cells;
+        size_t                         columns = 0;
+        size_t                         rows    = 0;
+        std::vector<std::vector<Cell>> cells;
     };
 
     struct Anchor {
-        std::string name;
+        std::string  name;
         FileLocation location;
     };
 
     struct Link {
-        enum class Type {
-            Web,
-            IntraFile,
-            InterFile
-        };
+        enum class Type { Web, IntraFile, InterFile };
 
-        std::string data;
-        std::string text;
-        Type type;
+        std::string  data;
+        std::string  text;
+        Type         type;
         FileLocation location;
     };
 
-    struct Paragraph {
-
-    };
+    struct Paragraph {};
 
     struct Code : public VisualElement {
-        Code(const FileLocation &location) : VisualElement(location) {}
+        Code(const FileLocation& location)
+            : VisualElement(location) {}
         std::string code;
         std::string type;
     };
 
     struct FormatedText {
         FormatedText() {}
-        FormatedText(const std::string &text)
-            : text(text)
-        {}
+        FormatedText(const std::string& text)
+            : text(text) {}
 
         std::string text;
-        bool bold = false;
-        bool italic = false;
-        bool monospaced = false;
-        bool stroked = false;
-        bool underlined = false;
+        bool        bold       = false;
+        bool        italic     = false;
+        bool        monospaced = false;
+        bool        stroked    = false;
+        bool        underlined = false;
     };
 
     struct GeneratedDocument : public VisualElement {
-        GeneratedDocument( const FileLocation &location ) : VisualElement(location) {}
+        GeneratedDocument(const FileLocation& location)
+            : VisualElement(location) {}
         std::vector<DocumentPart> document;
     };
 
     struct Text : public VisualElement {
-        Text(const FileLocation &location = FileLocation()) : VisualElement(location) {}
+        Text(const FileLocation& location = FileLocation())
+            : VisualElement(location) {}
 
         std::vector<DocumentPart> text;
     };
 
     struct Headline : public Text {
-        Headline() : Text() {}
+        Headline()
+            : Text() {}
         Headline(const Text& text, int level)
             : Text(text)
-            , level(level)
-        {}
+            , level(level) {}
 
         int level = 0;
     };
 
     struct List {
-        enum class Type {
-            Points,
-            Dashes,
-            Numbered
-        };
+        enum class Type { Points, Dashes, Numbered };
 
-        List() { }
-        List(const std::vector<Text> &entries, Type type, int level )
+        List() {}
+        List(const std::vector<Text>& entries, Type type, int level)
             : entries(entries)
             , type(type)
-            , level(level)
-        {}
-
+            , level(level) {}
 
         std::vector<Text> entries;
-        Type type = Type::Points;
-        int level = 0;
+        Type              type  = Type::Points;
+        int               level = 0;
     };
 
     struct Caption : public Text {
         Caption() = default;
         Caption(const Text& text)
-            : Text(text)
-        {}
+            : Text(text) {}
     };
 
     struct Image : public Text {
@@ -153,8 +141,7 @@ public:
             : Text(text)
             , format(format)
             , fileExtension(fileExtension)
-            , data(data)
-        {}
+            , data(data) {}
         std::string format;
         std::string fileExtension;
         std::string data;
@@ -162,66 +149,56 @@ public:
 
     DocumentPart() = default;
 
-    DocumentPart( const Paragraph & )
-        : _type( Type::Paragraph )
-    { }
+    DocumentPart(const Paragraph&)
+        : _type(Type::Paragraph) {}
 
-    DocumentPart( const Headline &headline )
-        : _type( Type::Headline )
-        , _data( headline )
-    { }
+    DocumentPart(const Headline& headline)
+        : _type(Type::Headline)
+        , _data(headline) {}
 
-    DocumentPart( const Text &text )
-        : _type( Type::Text )
-        , _data( text )
-    { }
+    DocumentPart(const Text& text)
+        : _type(Type::Text)
+        , _data(text) {}
 
-    DocumentPart( const FormatedText &text )
-        : _type( Type::FormatedText )
-        , _data( text )
-    { }
+    DocumentPart(const FormatedText& text)
+        : _type(Type::FormatedText)
+        , _data(text) {}
 
-    DocumentPart( const Caption &caption )
-        : _type( Type::Caption )
-        , _data( caption )
-    { }
+    DocumentPart(const Caption& caption)
+        : _type(Type::Caption)
+        , _data(caption) {}
 
-    DocumentPart( const Image &image )
-        : _type( Type::Image )
-        , _data( image )
-    { }
+    DocumentPart(const Image& image)
+        : _type(Type::Image)
+        , _data(image) {}
 
-    DocumentPart( const List &list )
-        : _type( Type::List )
-        , _data( list )
-    { }
+    DocumentPart(const List& list)
+        : _type(Type::List)
+        , _data(list) {}
 
-    DocumentPart( const Anchor &anchor )
-        : _type( Type::Anchor )
-        , _data( anchor )
-    { }
+    DocumentPart(const Anchor& anchor)
+        : _type(Type::Anchor)
+        , _data(anchor) {}
 
-    DocumentPart( const Link &link )
-        : _type( Type::Link )
-        , _data( link )
-    { }
+    DocumentPart(const Link& link)
+        : _type(Type::Link)
+        , _data(link) {}
 
-    DocumentPart( const GeneratedDocument &generated )
-        : _type( Type::GeneratedDocument )
-        , _data( generated )
-    { }
+    DocumentPart(const GeneratedDocument& generated)
+        : _type(Type::GeneratedDocument)
+        , _data(generated) {}
 
-    DocumentPart( const Code &code )
-        : _type( Type::Code )
-        , _data( code )
-    { }
+    DocumentPart(const Code& code)
+        : _type(Type::Code)
+        , _data(code) {}
 
-    DocumentPart( const Table &table )
-        : _type( Type::Table )
-        , _data( table )
-    { }
+    DocumentPart(const Table& table)
+        : _type(Type::Table)
+        , _data(table) {}
 
-    Type type() const { return _type; }
+    Type type() const {
+        return _type;
+    }
 
     const Text* text() const {
         return boost::get<Text>(&_data);
@@ -283,18 +260,15 @@ public:
     }
 
 private:
-    template< class T >
-    DocumentPart(Type type, const T &data)
+    template <class T>
+    DocumentPart(Type type, const T& data)
         : _type(type)
-        , _data(data)
-    { }
+        , _data(data) {}
 
     DocumentPart(Type type)
-        : _type(type)
-    { }
+        : _type(type) {}
 
-    Type _type = Type::Invalid;
+    Type                                                                                                             _type = Type::Invalid;
     boost::variant<Text, FormatedText, Caption, Headline, Image, List, Anchor, Link, GeneratedDocument, Code, Table> _data;
 };
-
 }
