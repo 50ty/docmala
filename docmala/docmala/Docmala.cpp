@@ -23,6 +23,7 @@
 #include "File.h"
 
 #include <extension_system/ExtensionSystem.hpp>
+#include <memory>
 
 using namespace docmala;
 
@@ -32,24 +33,24 @@ Docmala::Docmala(const std::string& pluginDir)
     _pluginLoader->searchDirectory(pluginDir, false);
 }
 
-Docmala::Docmala(const Document other, const std::string& pluginDir)
+Docmala::Docmala(const Document& other, const std::string& pluginDir)
     : Docmala(pluginDir) {
     _document.inheritFrom(other);
 }
 
-Docmala::~Docmala() {}
+Docmala::~Docmala() = default;
 
 void Docmala::setParameters(const ParameterList& parameters) {
     _parameters = parameters;
 }
 
 bool Docmala::parseFile(const std::string& fileName) {
-    _file.reset(new File(fileName));
+    _file = std::make_unique<File>(fileName);
     return parse();
 }
 
 bool Docmala::parseData(const std::string& data, const std::string& fileName) {
-    _file.reset(new MemoryFile(data, fileName));
+    _file = std::make_unique<MemoryFile>(data, fileName);
     return parse();
 }
 
@@ -59,13 +60,13 @@ bool Docmala::produceOutput(const std::string& pluginName) {
     if (plugin) {
         produceOutput(plugin);
     } else {
-        _errors.push_back(Error{FileLocation(), "Unable to load output plugin '" + pluginName + "'."});
+        _errors.emplace_back(FileLocation(), "Unable to load output plugin '" + pluginName + "'.");
         return false;
     }
     return true;
 }
 
-bool Docmala::produceOutput(std::shared_ptr<OutputPlugin> plugin) {
+bool Docmala::produceOutput(const std::shared_ptr<OutputPlugin>& plugin) {
     if (plugin) {
         ParameterList parameters = _parameters;
 
@@ -80,7 +81,8 @@ std::vector<std::string> Docmala::listOutputPlugins() const {
     auto                     plugins = _pluginLoader->extensions<OutputPlugin>();
     std::vector<std::string> knownOutputPlugins;
 
-    for (auto plugin : plugins) {
+    knownOutputPlugins.reserve(plugins.size());
+    for (const auto& plugin : plugins) {
         knownOutputPlugins.push_back(plugin.name() + "  -  " + plugin.description());
     }
 
@@ -102,7 +104,7 @@ bool Docmala::parse() {
     _registeredPostprocessing.clear();
 
     if (!_file->isOpen()) {
-        _errors.push_back(Error{FileLocation(), "Unable to open file '" + _file->fileName() + "'."});
+        _errors.emplace_back(FileLocation(), "Unable to open file '" + _file->fileName() + "'.");
         return false;
     }
 
@@ -117,7 +119,7 @@ bool Docmala::parse() {
                 case '\t':
                     continue;
                 case '\n':
-                    if (_document.parts().size() > 0 && _document.parts().back().type() != DocumentPart::Type::Paragraph) {
+                    if (!_document.parts().empty() && _document.parts().back().type() != DocumentPart::Type::Paragraph) {
                         _document.addPart(DocumentPart(DocumentPart::Paragraph()));
                     }
                     continue;
@@ -179,7 +181,7 @@ void Docmala::doPostprocessing() {
     while (documentChanged) {
         documentChanged = false;
         for (auto& post : _registeredPostprocessing) {
-            if (post.plugin->postProcessing() == DocumentPlugin::PostProcessing::DocumentChanged || post.processed == false) {
+            if (post.plugin->postProcessing() == DocumentPlugin::PostProcessing::DocumentChanged || !post.processed) {
                 if (post.plugin->postProcess(post.parameters, post.location, _document)) {
                     documentChanged = true;
                     auto errors     = post.plugin->lastErrors();
@@ -187,7 +189,7 @@ void Docmala::doPostprocessing() {
                         for (auto& error : errors) {
                             error.message = "    " + error.message;
                         }
-                        _errors.push_back({post.location, "Errors occured during plugin execution"});
+                        _errors.emplace_back(post.location, "Errors occured during plugin execution");
                         _errors.insert(_errors.end(), errors.begin(), errors.end());
                     }
                 }
@@ -230,7 +232,7 @@ void Docmala::checkConsistency() {
             auto link = part.link();
             if (link->type == DocumentPart::Link::Type::IntraFile) {
                 if (_document.anchors().find(link->data) == _document.anchors().end()) {
-                    _errors.push_back({link->location, "Unable to find anchor for link to: '" + link->data + "'."});
+                    _errors.emplace_back(link->location, "Unable to find anchor for link to: '" + link->data + "'.");
                 }
             }
         }
@@ -246,7 +248,7 @@ bool Docmala::readHeadLine() {
         }
 
         if (c == '\n') {
-            _errors.push_back(Error{_file->location(), std::string("Headline contains no text and is skipped.")});
+            _errors.emplace_back(_file->location(), std::string("Headline contains no text and is skipped."));
             return false;
         }
 
@@ -260,14 +262,15 @@ bool Docmala::readHeadLine() {
         }
     }
 
-    _errors.push_back(Error{_file->location(), std::string("End of file reached while parsing headline.")});
+    _errors.emplace_back(_file->location(), std::string("End of file reached while parsing headline."));
     return false;
 }
 
 bool Docmala::readCaption() {
     DocumentPart::Text text;
-    if (!readText('\0', text))
+    if (!readText('\0', text)) {
         return false;
+    }
     _document.addPart(DocumentPart::Caption(text));
     return true;
 }
@@ -300,40 +303,38 @@ bool Docmala::readPlugin() {
         if (mode == Mode::Begin) {
             if (c == ' ' || c == '\t') {
                 continue;
-            } else {
-                mode      = Mode::ParameterName;
-                nameBegin = _file->location();
             }
+            mode      = Mode::ParameterName;
+            nameBegin = _file->location();
         }
         if (mode == Mode::ParameterName) {
             if (c == ',') {
                 if (!readParameterList(parameters, ']')) {
                     return false;
-                } else {
-                    mode = Mode::SkipUntilNewLine;
-                    continue;
                 }
-            } else if (c == ']') {
                 mode = Mode::SkipUntilNewLine;
                 continue;
-            } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
+            }
+            if (c == ']') {
+                mode = Mode::SkipUntilNewLine;
+                continue;
+            }
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
                 name.push_back(c);
             } else {
-                _errors.push_back(
-                    Error{nameBegin,
-                          std::string(
-                              "Error while parsing plugin name. A valid name consists of ['a'-'z', 'A'-'Z', '0'-'9', '_', '-'] but a '")
-                              + c + "' was found."});
+                _errors.emplace_back(
+                    nameBegin,
+                    std::string("Error while parsing plugin name. A valid name consists of ['a'-'z', 'A'-'Z', '0'-'9', '_', '-'] but a '")
+                        + c + "' was found.");
                 return false;
             }
         } else if (mode == Mode::SkipUntilNewLine) {
             if (c == '\n') {
                 break;
-            } else {
-                if (!skipWarningPrinted) {
-                    _errors.push_back(Error{_file->location(), std::string("Text found after ']' is skipped.")});
-                    skipWarningPrinted = true;
-                }
+            }
+            if (!skipWarningPrinted) {
+                _errors.emplace_back(_file->location(), std::string("Text found after ']' is skipped."));
+                skipWarningPrinted = true;
             }
         }
     }
@@ -346,107 +347,109 @@ bool Docmala::readPlugin() {
         _loadedDocumentPlugins.insert(std::make_pair(name, plugin));
     }
     if (!plugin) {
-        _errors.push_back(Error{nameBegin, std::string("Unable to load plugin with name: '") + name + "'."});
+        _errors.emplace_back(nameBegin, std::string("Unable to load plugin with name: '") + name + "'.");
         return false;
-    } else {
-        if (plugin->postProcessing() != DocumentPlugin::PostProcessing::None) {
-            PostProcessingInfo postProcessing;
-            postProcessing.plugin     = plugin;
-            postProcessing.parameters = parameters;
-            postProcessing.location   = nameBegin;
-            _registeredPostprocessing.push_back(postProcessing);
+    }
+    if (plugin->postProcessing() != DocumentPlugin::PostProcessing::None) {
+        PostProcessingInfo postProcessing;
+        postProcessing.plugin     = plugin;
+        postProcessing.parameters = parameters;
+        postProcessing.location   = nameBegin;
+        _registeredPostprocessing.push_back(postProcessing);
+    }
+
+    if (plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Required
+        || plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Optional) {
+        std::string block;
+        if (!readBlock(block)) {
+            return false;
+        }
+        plugin->process(parameters, nameBegin, _document, block);
+        auto errors = plugin->lastErrors();
+        if (!errors.empty()) {
+            for (auto& error : errors) {
+                error.message = "    " + error.message;
+            }
+            _errors.emplace_back(nameBegin, "Errors occured during plugin execution");
+            _errors.insert(_errors.end(), errors.begin(), errors.end());
         }
 
-        if (plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Required
-            || plugin->blockProcessing() == DocumentPlugin::BlockProcessing::Optional) {
-            std::string block;
-            if (!readBlock(block)) {
-                return false;
-            } else {
-                plugin->process(parameters, nameBegin, _document, block);
-                auto errors = plugin->lastErrors();
-                if (!errors.empty()) {
-                    for (auto& error : errors) {
-                        error.message = "    " + error.message;
-                    }
-                    _errors.push_back({nameBegin, "Errors occured during plugin execution"});
-                    _errors.insert(_errors.end(), errors.begin(), errors.end());
-                }
+    } else {
+        plugin->process(parameters, nameBegin, _document, "");
+        auto errors = plugin->lastErrors();
+        if (!errors.empty()) {
+            for (auto& error : errors) {
+                error.message = "    " + error.message;
             }
-        } else {
-            plugin->process(parameters, nameBegin, _document, "");
-            auto errors = plugin->lastErrors();
-            if (!errors.empty()) {
-                for (auto& error : errors) {
-                    error.message = "    " + error.message;
-                }
-                _errors.push_back({nameBegin, "Errors occured during plugin execution"});
-                _errors.insert(_errors.end(), errors.begin(), errors.end());
-            }
+            _errors.emplace_back(nameBegin, "Errors occured during plugin execution");
+            _errors.insert(_errors.end(), errors.begin(), errors.end());
         }
     }
 
     return true;
 }
 
-bool Docmala::readAnchor(IFile* _file, std::vector<Error>& _errors, DocumentPart::Text& outText) {
+bool Docmala::readAnchor(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText) {
     enum class Mode { Begin, Name, EndTag1, EndTag2 } mode{Mode::Begin};
 
     std::string name;
-    auto        anchorLocation = _file->location();
+    auto        anchorLocation = file->location();
 
-    while (!_file->isEoF()) {
-        auto location = _file->location();
-        char c        = _file->getch();
+    while (!file->isEoF()) {
+        auto location = file->location();
+        char c        = file->getch();
 
         if (mode == Mode::Begin) {
             if (c == '[') {
                 mode = Mode::Name;
                 continue;
-            } else {
-                _errors.push_back(Error{location, std::string("Expected '[' but got '") + c + "'. This is an error in Docmala."});
-                return false;
             }
-        } else if (mode == Mode::Name) {
+            errors.emplace_back(location, std::string("Expected '[' but got '") + c + "'. This is an error in Docmala.");
+            return false;
+        }
+        if (mode == Mode::Name) {
             if (isWhitespace(c) && name.empty()) {
                 continue;
-            } else if (c == ']') {
+            }
+            if (c == ']') {
                 mode = Mode::EndTag1;
                 continue;
-            } else if (isWhitespace(c) && !name.empty()) {
+            }
+            if (isWhitespace(c) && !name.empty()) {
                 mode = Mode::EndTag2;
                 continue;
-            } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
+            }
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
                 name.push_back(c);
             } else {
-                _errors.push_back(Error{_file->location(),
-                                        std::string("Error while parsing anchor. A valid anchor name consisting of [a'-'z', 'A'-'Z', "
-                                                    "'0'-'9', '_', '-'] or a anchor end']]' was expected but a '")
-                                            + c + "' was found."});
+                errors.emplace_back(file->location(),
+                                    std::string("Error while parsing anchor. A valid anchor name consisting of [a'-'z', 'A'-'Z', "
+                                                "'0'-'9', '_', '-'] or a anchor end']]' was expected but a '")
+                                        + c + "' was found.");
                 return false;
             }
         } else if (mode == Mode::EndTag1) {
             if (c != ']') {
-                _errors.push_back(Error{location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'."});
+                errors.emplace_back(location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'.");
                 return false;
-            } else {
-                outText.text.push_back(DocumentPart::Anchor{name, anchorLocation});
-                return true;
             }
+            outText.text.emplace_back(DocumentPart::Anchor{name, anchorLocation});
+            return true;
+
         } else if (mode == Mode::EndTag2) {
             if (isWhitespace(c)) {
                 continue;
-            } else if (c == ']') {
+            }
+            if (c == ']') {
                 mode = Mode::EndTag1;
                 continue;
-            } else {
-                _errors.push_back(Error{location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'."});
-                return false;
             }
+            errors.emplace_back(location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'.");
+            return false;
         }
     }
 
-    _errors.push_back(Error{_file->location(), std::string("Error while parsing anchor. Unexpected end of file.")});
+    errors.emplace_back(file->location(), std::string("Error while parsing anchor. Unexpected end of file."));
     return false;
 }
 
@@ -469,78 +472,81 @@ bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Te
             if (c == '<') {
                 mode = Mode::Data;
                 continue;
-            } else {
-                errors.push_back(Error{location, std::string("Expected '<' but got '") + c + "'. This is an error in Docmala."});
-                return false;
             }
-        } else if (mode == Mode::Data) {
+            errors.emplace_back(location, std::string("Expected '<' but got '") + c + "'. This is an error in Docmala.");
+            return false;
+        }
+        if (mode == Mode::Data) {
             if (isWhitespace(c) && data.empty()) {
                 continue;
-            } else if (c == ',') {
+            }
+            if (c == ',') {
                 mode = Mode::Text;
                 continue;
-            } else if (c == '>') {
+            }
+            if (c == '>') {
                 mode = Mode::EndTag1;
                 continue;
-            } else if (isWhitespace(c) && !data.empty()) {
+            }
+            if (isWhitespace(c) && !data.empty()) {
                 mode = Mode::EndTag2;
                 continue;
-            } else {
-                data.push_back(c);
             }
+            data.push_back(c);
+
         } else if (mode == Mode::Text) {
             if (text.empty() && isWhitespace(c)) {
                 continue;
             }
             if (c == '>') {
                 if (text.empty()) {
-                    errors.push_back(
-                        Error{file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty.")});
+                    errors.emplace_back(file->location(), std::string("Error while parsing link. Text after colon is not allowed to be empty."));
                 }
                 mode = Mode::EndTag1;
                 continue;
-            } else if (c == '\n') {
-                errors.push_back(Error{file->location(),
-                                       std::string("Error while parsing link. A end tag '>>' was expected but a 'newline' was found.")});
-                return false;
-            } else {
-                text.push_back(c);
             }
+            if (c == '\n') {
+                errors.emplace_back(file->location(),
+                                    std::string("Error while parsing link. A end tag '>>' was expected but a 'newline' was found."));
+                return false;
+            }
+            text.push_back(c);
+
         } else if (mode == Mode::EndTag1) {
             if (c != '>') {
-                errors.push_back(Error{location, std::string("Error while parsing link. Expected '>' but got '") + c + "'."});
+                errors.emplace_back(location, std::string("Error while parsing link. Expected '>' but got '") + c + "'.");
                 return false;
-            } else {
-                auto type = DocumentPart::Link::Type::IntraFile;
-
-                if (data.find("://") != std::string::npos) {
-                    type = DocumentPart::Link::Type::Web;
-                } else if (data.find(":") != std::string::npos && data.find(".") != std::string::npos) {
-                    type = DocumentPart::Link::Type::InterFile;
-                }
-
-                if (data.empty()) {
-                    errors.push_back(Error{linkLocation, std::string("Error while parsing link. Link data is not allowed to be empty.")});
-                    return false;
-                }
-
-                outText.text.push_back(DocumentPart::Link{data, text, type, linkLocation});
-                return true;
             }
+            auto type = DocumentPart::Link::Type::IntraFile;
+
+            if (data.find("://") != std::string::npos) {
+                type = DocumentPart::Link::Type::Web;
+            } else if (data.find(':') != std::string::npos && data.find('.') != std::string::npos) {
+                type = DocumentPart::Link::Type::InterFile;
+            }
+
+            if (data.empty()) {
+                errors.emplace_back(linkLocation, std::string("Error while parsing link. Link data is not allowed to be empty."));
+                return false;
+            }
+
+            outText.text.emplace_back(DocumentPart::Link{data, text, type, linkLocation});
+            return true;
+
         } else if (mode == Mode::EndTag2) {
             if (isWhitespace(c)) {
                 continue;
-            } else if (c == '>') {
+            }
+            if (c == '>') {
                 mode = Mode::EndTag1;
                 continue;
-            } else {
-                errors.push_back(Error{location, std::string("Error while parsing anchor. Expected '>' but got '") + c + "'."});
-                return false;
             }
+            errors.emplace_back(location, std::string("Error while parsing anchor. Expected '>' but got '") + c + "'.");
+            return false;
         }
     }
 
-    errors.push_back(Error{file->location(), std::string("Error while parsing anchor. Unexpected end of file.")});
+    errors.emplace_back(file->location(), std::string("Error while parsing anchor. Unexpected end of file."));
     return false;
 }
 
@@ -559,29 +565,29 @@ bool Docmala::readMetaData() {
             if (c == ' ' || c == '\t') {
                 if (metaData.key.empty()) { // skip leading white spaces
                     continue;
-                } else {
-                    mode = Mode::EndOrAssign;
-                    continue;
                 }
-            } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
+                mode = Mode::EndOrAssign;
+                continue;
+            }
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
                 metaData.key.push_back(c);
             } else if (c == '=' || c == '+') {
                 if (metaData.key.empty()) {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while parsing meta data key. A key consisting of ['a'-'z', 'A'-'Z', "
-                                                        "'0'-'9', '_', '-'] was expected but a '")
-                                                + c + "' was found."});
+                    _errors.emplace_back(_file->location(),
+                                         std::string("Error while parsing meta data key. A key consisting of ['a'-'z', 'A'-'Z', "
+                                                     "'0'-'9', '_', '-'] was expected but a '")
+                                             + c + "' was found.");
                     return false;
-                } else {
-                    mode = Mode::EndOrAssign;
                 }
+                mode = Mode::EndOrAssign;
+
             } else if (c == '}') {
                 mode = Mode::EndOrAssign;
             } else {
-                _errors.push_back(Error{_file->location(),
-                                        std::string("Error while parsing meta data key. A valid meta data key consisting of [a'-'z', "
-                                                    "'A'-'Z', '0'-'9', '_', '-'] was expected but a '")
-                                            + c + "' was found."});
+                _errors.emplace_back(_file->location(),
+                                     std::string("Error while parsing meta data key. A valid meta data key consisting of [a'-'z', "
+                                                 "'A'-'Z', '0'-'9', '_', '-'] was expected but a '")
+                                         + c + "' was found.");
                 return false;
             }
         }
@@ -606,19 +612,19 @@ bool Docmala::readMetaData() {
         if (mode == Mode::ParameterValue) {
             if ((c == ' ' || c == '\t') && metaData.data.empty()) {
                 continue;
-            } else if (c == '}') {
+            }
+            if (c == '}') {
                 if (metaData.data.empty()) {
-                    _errors.push_back({_file->location(), std::string("A value was expected but '") + c + "' was found."});
+                    _errors.emplace_back(_file->location(), std::string("A value was expected but '") + c + "' was found.");
                     return false;
                 }
                 mode = Mode::SkipUntilNewLine;
                 continue;
-            } else {
-                if (metaData.data.empty()) {
-                    metaData.data.push_back({loc, ""});
-                }
-                metaData.data.front().value.push_back(c);
             }
+            if (metaData.data.empty()) {
+                metaData.data.push_back({loc, ""});
+            }
+            metaData.data.front().value.push_back(c);
         }
         if (mode == Mode::SkipUntilNewLine) {
             if (addMetaData) {
@@ -642,15 +648,14 @@ bool Docmala::readMetaData() {
             }
             if (c == '\n') {
                 return ok;
-            } else {
-                if (!skipWarningPrinted) {
-                    _errors.push_back(Error{_file->location(), std::string("Text found after '}' is skipped.")});
-                    skipWarningPrinted = true;
-                }
+            }
+            if (!skipWarningPrinted) {
+                _errors.emplace_back(_file->location(), std::string("Text found after '}' is skipped."));
+                skipWarningPrinted = true;
             }
         }
     }
-    _errors.push_back(Error{_file->location(), std::string("Error while parsing meta data. Unexpected end of file.")});
+    _errors.emplace_back(_file->location(), std::string("Error while parsing meta data. Unexpected end of file."));
     return false;
 }
 
@@ -901,45 +906,47 @@ bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharac
                         break;
                 }
                 if (!store.text.empty()) {
-                    text.text.push_back(store);
+                    text.text.emplace_back(store);
                     formatedText.text.clear();
                 }
             } else {
                 formatedText.text.push_back(c);
             }
         } else if (c == '\n') {
-            if (!formatedText.text.empty())
-                text.text.push_back(formatedText);
+            if (!formatedText.text.empty()) {
+                text.text.emplace_back(formatedText);
+            }
             bool ok = true;
             if (formatedText.bold) {
-                errors.push_back(Error{file->location(), std::string("Bold formating (\"**'\") was not closed.")});
+                errors.emplace_back(file->location(), std::string("Bold formating (\"**'\") was not closed."));
                 ok = false;
             }
             if (formatedText.italic) {
-                errors.push_back(Error{file->location(), std::string("Italic formating (\"//\") was not closed.")});
+                errors.emplace_back(file->location(), std::string("Italic formating (\"//\") was not closed."));
                 ok = false;
             }
             if (formatedText.monospaced) {
-                errors.push_back(Error{file->location(), std::string("Monospace formating (\"''\") was not closed.")});
+                errors.emplace_back(file->location(), std::string("Monospace formating (\"''\") was not closed."));
                 ok = false;
             }
             if (formatedText.stroked) {
-                errors.push_back(Error{file->location(), std::string("Stroked formating (\"--\") was not closed.")});
+                errors.emplace_back(file->location(), std::string("Stroked formating (\"--\") was not closed."));
                 ok = false;
             }
             if (formatedText.underlined) {
-                errors.push_back(Error{file->location(), std::string("Underlined formating (\"--\") was not closed.")});
+                errors.emplace_back(file->location(), std::string("Underlined formating (\"--\") was not closed."));
                 ok = false;
             }
             return ok;
         } else if (c == '[' && file->following() == '[' && file->previous() != '\\') {
-            if (!formatedText.text.empty())
-                text.text.push_back(formatedText);
+            if (!formatedText.text.empty()) {
+                text.text.emplace_back(formatedText);
+            }
             readAnchor(file, errors, text);
             formatedText.text.clear();
         } else if (c == '<' && file->following() == '<' && file->previous() != '\\') {
             if (!formatedText.text.empty()) {
-                text.text.push_back(formatedText);
+                text.text.emplace_back(formatedText);
             }
             readLink(file, errors, text);
             formatedText.text.clear();
@@ -952,15 +959,17 @@ bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharac
             formatedText.text.push_back(c);
         }
 
-        if (file->isEoF())
+        if (file->isEoF()) {
             break;
+        }
 
         c = file->getch();
     }
 
     // end of file is no error, when parsing text
-    if (!formatedText.text.empty())
-        text.text.push_back(formatedText);
+    if (!formatedText.text.empty()) {
+        text.text.emplace_back(formatedText);
+    }
     return true;
 }
 
@@ -974,157 +983,159 @@ bool Docmala::readParameterList(ParameterList& parameters, char blockEnd) {
     while (!_file->isEoF()) {
         char c = _file->getch();
         if (c == '\n') {
-            _errors.push_back(
-                Error{_file->location(),
-                      std::string("Error while parsing parameters. A valid parameter definition was expected but a 'newline' was found.")});
+            _errors.emplace_back(
+                _file->location(),
+                std::string("Error while parsing parameters. A valid parameter definition was expected but a 'newline' was found."));
             return false;
         }
         if (mode == Mode::ParameterName) {
             if (c == ' ' || c == '\t') {
                 if (parameter.key.empty()) { // skip leading white spaces
                     continue;
-                } else {
-                    mode = Mode::EndOrEquals;
-                    continue;
                 }
-            } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
+                mode = Mode::EndOrEquals;
+                continue;
+            }
+            if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') {
                 parameter.key.push_back(c);
             } else if (c == '=') {
                 if (parameter.key.empty()) {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while parsing parameter name. A name consisting of ['a'-'z', 'A'-'Z', "
-                                                        "'0'-'9', '_', '-'] was expected but a '")
-                                                + c + "' was found."});
+                    _errors.emplace_back(_file->location(),
+                                         std::string("Error while parsing parameter name. A name consisting of ['a'-'z', 'A'-'Z', "
+                                                     "'0'-'9', '_', '-'] was expected but a '")
+                                             + c + "' was found.");
                     return false;
-                } else {
-                    mode = Mode::ParameterValue;
-                    continue;
                 }
+                mode = Mode::ParameterValue;
+                continue;
+
             } else if (c == ',') {
                 if (parameter.key.empty()) {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while parsing parameter name. A name consisting of ['a'-'z', 'A'-'Z', "
-                                                        "'0'-'9', '_', '-'] was expected but a '")
-                                                + c + "' was found."});
+                    _errors.emplace_back(_file->location(),
+                                         std::string("Error while parsing parameter name. A name consisting of ['a'-'z', 'A'-'Z', "
+                                                     "'0'-'9', '_', '-'] was expected but a '")
+                                             + c + "' was found.");
                     return false;
-                } else {
-                    parameters.insert(std::make_pair(parameter.key, parameter));
-                    parameter = Parameter();
-                    mode      = Mode::ParameterName;
-                    continue;
                 }
+                parameters.insert(std::make_pair(parameter.key, parameter));
+                parameter = Parameter();
+                mode      = Mode::ParameterName;
+                continue;
+
             } else if (c == blockEnd) {
                 if (parameter.key.empty()) {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while parsing parameter name. A valid name consisting of ['a'-'z', 'A'-'Z', "
-                                                        "'0'-'9', '_', '-'] was expected but a ']' was found.")});
+                    _errors.emplace_back(_file->location(),
+                                         std::string("Error while parsing parameter name. A valid name consisting of ['a'-'z', 'A'-'Z', "
+                                                     "'0'-'9', '_', '-'] was expected but a ']' was found."));
                     return false;
-                } else {
-                    parameters.insert(std::make_pair(parameter.key, parameter));
-                    parameter = Parameter();
-                    return true;
                 }
+                parameters.insert(std::make_pair(parameter.key, parameter));
+                parameter = Parameter();
+                return true;
+
             } else {
-                _errors.push_back(
-                    Error{_file->location(),
-                          std::string(
-                              "Error while parsing parameter name. A valid name consisting of [a'-'z', 'A'-'Z', '0'-'9', '_', '-'] or a '")
-                              + blockEnd + "' was expected but a '" + c + "' was found."});
+                _errors.emplace_back(
+                    _file->location(),
+                    std::string(
+                        "Error while parsing parameter name. A valid name consisting of [a'-'z', 'A'-'Z', '0'-'9', '_', '-'] or a '")
+                        + blockEnd + "' was expected but a '" + c + "' was found.");
                 return false;
             }
         } else if (mode == Mode::EndOrEquals) {
             if (c == ' ' || c == '\t') {
                 continue;
-            } else if (c == '=') {
+            }
+            if (c == '=') {
                 mode = Mode::ParameterValue;
                 continue;
-            } else if (c == blockEnd) {
+            }
+            if (c == blockEnd) {
                 parameters.insert(std::make_pair(parameter.key, parameter));
                 parameter = Parameter();
                 return true;
-            } else {
-                _errors.push_back(Error{_file->location(),
-                                        std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c
-                                            + "' was found."});
-                return false;
             }
+            _errors.emplace_back(_file->location(),
+                                 std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c
+                                     + "' was found.");
+            return false;
+
         } else if (mode == Mode::EndOrNext) {
             if (c == ' ' || c == '\t') {
                 continue;
-            } else if (c == ',') {
+            }
+            if (c == ',') {
                 mode = Mode::ParameterName;
                 parameters.insert(std::make_pair(parameter.key, parameter));
                 parameter = Parameter();
                 continue;
-            } else if (c == blockEnd) {
+            }
+            if (c == blockEnd) {
                 parameters.insert(std::make_pair(parameter.key, parameter));
                 parameter = Parameter();
                 return true;
-            } else {
-                _errors.push_back(Error{_file->location(),
-                                        std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c
-                                            + "' was found."});
-                return false;
             }
+            _errors.emplace_back(_file->location(),
+                                 std::string("Error while parsing parameter. A '=' or '") + blockEnd + "' was expected but a '" + c
+                                     + "' was found.");
+            return false;
+
         } else if (mode == Mode::ParameterValue) {
             if (parameter.value.empty() && (c == ' ' || c == '\t')) {
                 continue;
-            } else if (parameter.value.empty() && valueMode == ValueMode::Normal) {
+            }
+            if (parameter.value.empty() && valueMode == ValueMode::Normal) {
                 if (c == '"') {
                     valueMode = ValueMode::Extended;
                     continue;
-                } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
+                }
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')) {
                     valueMode = ValueMode::Normal;
                     parameter.value.push_back(c);
                     continue;
-                } else {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while parsing parameter value. ")
-                                                + "A valid value has to start with ['a'-'z', 'A'-'Z', '0'-'9'] or "
-                                                + " has to be placed in '\"' but a " + c + "' was found."});
+                }
+                _errors.emplace_back(_file->location(),
+                                     std::string("Error while parsing parameter value. ")
+                                         + "A valid value has to start with ['a'-'z', 'A'-'Z', '0'-'9'] or "
+                                         + " has to be placed in '\"' but a " + c + "' was found.");
+                return false;
+            }
+            if (valueMode == ValueMode::Extended) {
+                if (c == '"') {
+                    if (parameter.value.back() == '\\') {
+                        parameter.value.back() = '"';
+                        continue;
+                    }
+                    mode      = Mode::EndOrNext;
+                    valueMode = ValueMode::Normal;
+                    continue;
+                }
+                if (c == '\n') {
+                    _errors.emplace_back(_file->location(),
+                                         std::string(
+                                             "Error while parsing parameter value. A '\"' was expected but a 'newline' was found."));
                     return false;
                 }
-            } else {
-                if (valueMode == ValueMode::Extended) {
-                    if (c == '"') {
-                        if (parameter.value.back() == '\\') {
-                            parameter.value.back() = '"';
-                            continue;
-                        } else {
-                            mode      = Mode::EndOrNext;
-                            valueMode = ValueMode::Normal;
-                            continue;
-                        }
-                    } else if (c == '\n') {
-                        _errors.push_back(
-                            Error{_file->location(),
-                                  std::string("Error while parsing parameter value. A '\"' was expected but a 'newline' was found.")});
-                        return false;
-                    } else {
-                        parameter.value.push_back(c);
-                        continue;
+                parameter.value.push_back(c);
+                continue;
+            }
+            if (valueMode == ValueMode::Normal) {
+                if (c == ' ' || c == '\t' || c == ',' || c == blockEnd) {
+                    mode = Mode::ParameterName;
+                    parameters.insert(std::make_pair(parameter.key, parameter));
+                    parameter = Parameter();
+                    if (c == blockEnd) {
+                        return true;
                     }
-                } else if (valueMode == ValueMode::Normal) {
-                    if (c == ' ' || c == '\t' || c == ',' || c == blockEnd) {
-                        mode = Mode::ParameterName;
-                        parameters.insert(std::make_pair(parameter.key, parameter));
-                        parameter = Parameter();
-                        if (c == blockEnd) {
-                            return true;
-                        } else {
-                            continue;
-                        }
-                    } else {
-                        parameter.value.push_back(c);
-                        continue;
-                    }
+                    continue;
                 }
+                parameter.value.push_back(c);
+                continue;
             }
         }
     }
-    _errors.push_back(
-        Error{_file->location(),
-              std::string("Error while parsing parameters. A valid parameter definition was expected but an 'end of file' was found.")});
+    _errors.emplace_back(_file->location(),
+                         std::string(
+                             "Error while parsing parameters. A valid parameter definition was expected but an 'end of file' was found."));
     return false;
 }
 
@@ -1140,44 +1151,36 @@ bool Docmala::readBlock(std::string& block) {
         if (c == '-' || (c == '\\' && potentialDelimiter.empty())) {
             potentialDelimiter.push_back(c);
             continue;
-        } else {
-            if (potentialDelimiter.substr(0, 4) == "----") {
-                if (c == '\n') {
-                    potentialDelimiter.clear();
-                    if (searchingEnd) {
-                        return true;
-                    }
-                    searchingEnd = true;
-                    continue;
-                } else {
-                    _errors.push_back(
-                        Error{_file->location(),
-                              std::string("Error while reading block. A valid delimiter may only contain '-' but a '") + c + "' was found."});
-                    return false;
-                }
-            } else {
-                if (!searchingEnd) {
-                    _errors.push_back(Error{_file->location(),
-                                            std::string("Error while reading block. A valid delimiter ('") + delimiter
-                                                + "') was expected but a '" + c + "' was found."});
-                    return false;
-                } else {
-                    if (potentialDelimiter.size() > 0 && potentialDelimiter.front() == '\\') {
-                        block.append(potentialDelimiter.substr(1));
-                    } else {
-                        block.append(potentialDelimiter);
-                    }
-                    block.push_back(c);
-                    potentialDelimiter.clear();
-                    // mode = Mode::Text;
-                    continue;
-                }
-            }
         }
+        if (potentialDelimiter.substr(0, 4) == "----") {
+            if (c == '\n') {
+                potentialDelimiter.clear();
+                if (searchingEnd) {
+                    return true;
+                }
+                searchingEnd = true;
+                continue;
+            }
+            _errors.emplace_back(_file->location(),
+                                 std::string("Error while reading block. A valid delimiter may only contain '-' but a '") + c + "' was found.");
+            return false;
+        }
+        if (!searchingEnd) {
+            _errors.emplace_back(_file->location(),
+                                 std::string("Error while reading block. A valid delimiter ('") + delimiter + "') was expected but a '" + c
+                                     + "' was found.");
+            return false;
+        }
+        if (!potentialDelimiter.empty() && potentialDelimiter.front() == '\\') {
+            block.append(potentialDelimiter.substr(1));
+        } else {
+            block.append(potentialDelimiter);
+        }
+        block.push_back(c);
+        potentialDelimiter.clear();
     }
-    _errors.push_back(
-        Error{_file->location(),
-              std::string("Error while parsing block. A valid block definition was expected but an 'end of file' was found.")});
+    _errors.emplace_back(_file->location(),
+                         std::string("Error while parsing block. A valid block definition was expected but an 'end of file' was found."));
     return false;
 }
 
@@ -1200,10 +1203,9 @@ bool Docmala::readList(DocumentPart::List::Type type) {
                     _document.addPart(DocumentPart::List({text}, type, level));
                 }
                 return true;
-            } else {
-                _document.addPart(DocumentPart::List({text}, type, level));
-                return true;
             }
+            _document.addPart(DocumentPart::List({text}, type, level));
+            return true;
         }
     }
     return false;

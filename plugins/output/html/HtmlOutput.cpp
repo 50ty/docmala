@@ -18,17 +18,18 @@
         You should have received a copy of the GNU Lesser General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <extension_system/Extension.hpp>
+#include <algorithm>
 #include <docmala/DocmaPlugin.h>
+#include <extension_system/Extension.hpp>
 #include <fstream>
 #include <sstream>
-#include <algorithm>
 
 #include "HtmlOutput.h"
 
-static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                        "abcdefghijklmnopqrstuvwxyz"
-                                        "0123456789+/";
+namespace {
+const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                 "abcdefghijklmnopqrstuvwxyz"
+                                 "0123456789+/";
 
 std::string base64_encode(const std::string& inputData) {
     std::string   ret;
@@ -37,45 +38,50 @@ std::string base64_encode(const std::string& inputData) {
     unsigned char char_array_3[3];
     unsigned char char_array_4[4];
 
-    for (auto data = inputData.begin(); data != inputData.end(); data++) {
-        char_array_3[i++] = *data;
+    for (char data : inputData) {
+        char_array_3[i++] = data;
         if (i == 3) {
             char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
             char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
             char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
             char_array_4[3] = char_array_3[2] & 0x3f;
 
-            for (i = 0; (i < 4); i++)
+            for (i = 0; (i < 4); i++) {
                 ret += base64_chars[char_array_4[i]];
+            }
             i = 0;
         }
     }
 
-    if (i) {
-        for (j = i; j < 3; j++)
+    if (i != 0) {
+        for (j = i; j < 3; j++) {
             char_array_3[j] = '\0';
+        }
 
         char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
         char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
         char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
         char_array_4[3] = char_array_3[2] & 0x3f;
 
-        for (j = 0; (j < i + 1); j++)
+        for (j = 0; (j < i + 1); j++) {
             ret += base64_chars[char_array_4[j]];
+        }
 
-        while ((i++ < 3))
+        while ((i++ < 3)) {
             ret += '=';
+        }
     }
 
     return ret;
 }
 
-std::string escapeAnchor(const std::string anchor) {
+std::string escapeAnchor(const std::string& anchor) {
     std::string escape = anchor;
     std::replace(escape.begin(), escape.end(), '.', 'd');
     std::replace(escape.begin(), escape.end(), ':', 'c');
     return escape;
 }
+} // namespace
 
 using namespace docmala;
 
@@ -90,7 +96,7 @@ public:
 
         if (inputFile != parameters.end()) {
             outputFileName = inputFile->second.value;
-            nameBase       = outputFileName.substr(0, outputFileName.find_last_of("."));
+            nameBase       = outputFileName.substr(0, outputFileName.find_last_of('.'));
             outputFileName = nameBase + ".html";
         }
 
@@ -102,15 +108,15 @@ public:
             HtmlOutput output;
             auto       html = output.produceHtml(parameters, document);
 
-            outFile << "<!doctype html>" << std::endl;
-            outFile << "<html>" << std::endl;
-            outFile << "<head>" << std::endl;
-            outFile << html.head << std::endl;
-            outFile << "</head>" << std::endl;
+            outFile << "<!doctype html>\n";
+            outFile << "<html>\n";
+            outFile << "<head>\n";
+            outFile << html.head << "\n";
+            outFile << "</head>\n";
 
-            outFile << "<body>" << std::endl;
-            outFile << html.body << std::endl;
-            outFile << "</body>" << std::endl;
+            outFile << "<body>\n";
+            outFile << html.body << "\n";
+            outFile << "</body>\n";
             return true;
         }
         return false;
@@ -136,8 +142,9 @@ void replaceAll(std::string& source, const std::string& from, const std::string&
 }
 
 std::string id(const DocumentPart::VisualElement* element) {
-    if (element->location.valid())
+    if (element->location.valid()) {
         return std::string(" id=\"line_") + std::to_string(element->location.line) + "\"";
+    }
     return "";
 }
 
@@ -181,9 +188,9 @@ void writeFormatedText(std::stringstream& outFile, const DocumentPart::FormatedT
 
 void writeCode(std::stringstream& outFile, const DocumentPart::Code* code) {
     if (!code->type.empty()) {
-        outFile << "<pre" << id(code) << "> <code class=\"" << code->type << "\">" << std::endl;
+        outFile << "<pre" << id(code) << "> <code class=\"" << code->type << "\">\n";
     } else {
-        outFile << "<pre> <code>" << std::endl;
+        outFile << "<pre> <code>\n";
     }
 
     std::string cde = code->code;
@@ -192,15 +199,15 @@ void writeCode(std::stringstream& outFile, const DocumentPart::Code* code) {
     replaceAll(cde, ">", "&gt;");
 
     outFile << cde;
-    outFile << "</code> </pre>" << std::endl;
+    outFile << "</code> </pre>\n";
 }
 
 void HtmlOutput::writeTable(std::stringstream& outFile, const DocumentPart::Table* table) {
-    outFile << "<table>" << std::endl;
+    outFile << "<table>\n";
     bool firstRow = true;
     for (const auto& row : table->cells) {
         bool firstColumn = true;
-        outFile << "<tr>" << std::endl;
+        outFile << "<tr>\n";
         std::string end;
 
         for (const auto& cell : row) {
@@ -216,25 +223,25 @@ void HtmlOutput::writeTable(std::stringstream& outFile, const DocumentPart::Tabl
                 span += " rowspan=\"" + std::to_string(cell.rowSpan + 1) + "\"";
             }
             if (cell.isHeading && firstRow) {
-                outFile << "<th scope=\"col\"" + span + ">" << std::endl;
+                outFile << "<th scope=\"col\"" + span + ">\n";
                 end = "</th>";
             } else if (cell.isHeading && firstColumn) {
-                outFile << "<th scope=\"row\"" + span + ">" << std::endl;
+                outFile << "<th scope=\"row\"" + span + ">\n";
                 end = "</th>";
             } else {
-                outFile << "<td" + span + ">" << std::endl;
+                outFile << "<td" + span + ">\n";
                 end = "</td>";
             }
 
             writeDocumentParts(outFile, cell.content, true);
-            outFile << std::endl << end << std::endl;
+            outFile << "\n" << end << "\n";
 
             firstColumn = false;
         }
-        outFile << "</tr>" << std::endl;
+        outFile << "</tr>\n";
         firstRow = false;
     }
-    outFile << "</table>" << std::endl;
+    outFile << "</table>\n";
 }
 
 void HtmlOutput::writeList(std::stringstream&                         outFile,
@@ -260,17 +267,16 @@ void HtmlOutput::writeList(std::stringstream&                         outFile,
         }
 
         currentLevel++;
-        outFile << "<" << type << " " << style << ">" << std::endl;
+        outFile << "<" << type << " " << style << ">\n";
         while (true) {
             writeList(outFile, start, documentParts, isGenerated, currentLevel);
             if (start + 1 == documentParts.end() || (start + 1)->type() != DocumentPart::Type::List
                 || (start + 1)->list()->level < currentLevel) {
                 break;
-            } else {
-                start++;
             }
+            start++;
         }
-        outFile << "</" << type << ">" << std::endl;
+        outFile << "</" << type << ">\n";
         currentLevel--;
     } else if (currentLevel == list->level) {
         for (auto entry = list->entries.begin(); entry != list->entries.end(); entry++) {
@@ -283,7 +289,7 @@ void HtmlOutput::writeList(std::stringstream&                         outFile,
                     writeList(outFile, start, documentParts, isGenerated, currentLevel);
                 }
             }
-            outFile << " </li>" << std::endl;
+            outFile << " </li>\n";
         }
     }
 }
@@ -291,7 +297,7 @@ void HtmlOutput::writeList(std::stringstream&                         outFile,
 void HtmlOutput::prepare(const std::vector<DocumentPart>& documentParts) {
     auto previous = documentParts.end();
 
-    for (std::vector<DocumentPart>::const_iterator part = documentParts.begin(); part != documentParts.end(); previous = part, part++) {
+    for (auto part = documentParts.begin(); part != documentParts.end(); previous = part, part++) {
         if (part->type() == DocumentPart::Type::GeneratedDocument) {
             prepare(part->generatedDocument()->document);
         }
@@ -306,7 +312,7 @@ void HtmlOutput::prepare(const std::vector<DocumentPart>& documentParts) {
             DocumentPart::Anchor const* anchor = nullptr;
 
             if (previous != documentParts.end() && previous->type() == DocumentPart::Type::Text) {
-                if (previous->text()->text.size() > 0 && previous->text()->text.front().type() == DocumentPart::Type::Anchor) {
+                if (!previous->text()->text.empty() && previous->text()->text.front().type() == DocumentPart::Type::Anchor) {
                     anchor = previous->text()->text.front().anchor();
                 }
             }
@@ -356,7 +362,7 @@ void HtmlOutput::prepare(const std::vector<DocumentPart>& documentParts) {
                 _titleData.insert(std::make_pair(location, title));
             }
 
-            if (anchor != nullptr) {
+            if (anchor) {
                 _anchorData.insert(std::make_pair(anchor->name, title));
             }
         }
@@ -364,10 +370,10 @@ void HtmlOutput::prepare(const std::vector<DocumentPart>& documentParts) {
 }
 
 void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart>& documentParts, bool isGenerated) {
-    bool                                      paragraphOpen = false;
-    std::vector<DocumentPart>::const_iterator previous      = documentParts.end();
+    bool paragraphOpen = false;
+    auto previous      = documentParts.end();
 
-    for (std::vector<DocumentPart>::const_iterator part = documentParts.begin(); part != documentParts.end(); part++) {
+    for (auto part = documentParts.begin(); part != documentParts.end(); part++) {
         switch (part->type()) {
             case DocumentPart::Type::Invalid:
                 break;
@@ -375,7 +381,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 break;
             case DocumentPart::Type::Headline: {
                 if (paragraphOpen) {
-                    outFile << "</p>" << std::endl;
+                    outFile << "</p>\n";
                     paragraphOpen = false;
                 }
                 auto headline      = part->headline();
@@ -390,9 +396,9 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 }
                 writeDocumentParts(outFile, headline->text, isGenerated);
                 if (!isGenerated) {
-                    outFile << "</span>" << std::endl;
+                    outFile << "</span>\n";
                 }
-                outFile << "</h" << headline->level << ">" << std::endl;
+                outFile << "</h" << headline->level << ">\n";
                 break;
             }
             case DocumentPart::Type::FormatedText: {
@@ -413,7 +419,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     writeDocumentParts(outFile, caption->text, isGenerated);
 
                     if (!isGenerated) {
-                        outFile << "</span>" << std::endl;
+                        outFile << "</span>\n";
                     }
                 }
                 break;
@@ -428,21 +434,21 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 writeDocumentParts(outFile, text->text, isGenerated);
 
                 if (!isGenerated) {
-                    outFile << "</span>" << std::endl;
+                    outFile << "</span>\n";
                 }
                 break;
             }
             case DocumentPart::Type::Paragraph:
                 if (paragraphOpen) {
-                    outFile << "</p>" << std::endl;
+                    outFile << "</p>\n";
                     paragraphOpen = false;
                 }
-                outFile << "<p>" << std::endl;
+                outFile << "<p>\n";
                 paragraphOpen = true;
                 break;
             case DocumentPart::Type::Image: {
                 auto image = part->image();
-                outFile << "<figure" << id(image) << ">" << std::endl;
+                outFile << "<figure" << id(image) << ">\n";
                 if (_embedImages) {
                     outFile << "<img src=\"data:image/" << image->format << ";base64,";
                     outFile << base64_encode(image->data);
@@ -463,7 +469,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                         imageImportName = imageImportName.substr(imageImportName.find_last_of('/') + 1);
                     }
 
-                    outFile << "<img src=\"" << imageImportName << "\">" << std::endl;
+                    outFile << "<img src=\"" << imageImportName << "\">\n";
                 }
                 auto title = _titleData.find(image->location);
                 if (title != _titleData.end()) {
@@ -473,11 +479,11 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     }
                     writeDocumentParts(outFile, title->second.text.text, isGenerated);
                     if (!isGenerated) {
-                        outFile << "</span>" << std::endl;
+                        outFile << "</span>\n";
                     }
-                    outFile << "</figcaption>" << std::endl;
+                    outFile << "</figcaption>\n";
                 }
-                outFile << "</figure>" << std::endl;
+                outFile << "</figure>\n";
                 _imageCounter++;
                 break;
             }
@@ -487,15 +493,15 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             }
             case DocumentPart::Type::GeneratedDocument: {
                 auto generated = part->generatedDocument();
-                outFile << "<div " << id(generated) << ">" << std::endl;
+                outFile << "<div " << id(generated) << ">\n";
                 writeDocumentParts(outFile, generated->document, true);
-                outFile << "</div>" << std::endl;
+                outFile << "</div>\n";
                 break;
             }
             case DocumentPart::Type::Code: {
                 auto code = part->code();
 
-                outFile << "<figure" << id(code) << ">" << std::endl;
+                outFile << "<figure" << id(code) << ">\n";
                 writeCode(outFile, code);
                 auto title = _titleData.find(code->location);
                 if (title != _titleData.end()) {
@@ -505,17 +511,17 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     }
                     writeDocumentParts(outFile, title->second.text.text, isGenerated);
                     if (!isGenerated) {
-                        outFile << "</span>" << std::endl;
+                        outFile << "</span>\n";
                     }
-                    outFile << "</figcaption>" << std::endl;
+                    outFile << "</figcaption>\n";
                 }
 
-                outFile << "</figure>" << std::endl;
+                outFile << "</figure>\n";
                 break;
             }
             case DocumentPart::Type::Anchor: {
                 auto anchor = part->anchor();
-                outFile << "<a id=\"" << escapeAnchor(anchor->name) << "\"/>" << std::endl;
+                outFile << "<a id=\"" << escapeAnchor(anchor->name) << "\"/>\n";
                 break;
             }
             case DocumentPart::Type::Link: {
@@ -549,20 +555,20 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     } else if (text != "#") {
                         outFile << text;
                     }
-                    outFile << "</a>" << std::endl;
+                    outFile << "</a>\n";
                 } else if (link->type == DocumentPart::Link::Type::InterFile) {
                     std::string data     = link->data;
-                    data[data.find(":")] = '#';
-                    outFile << "<a href=\"" << data << "\">" << text << "</a>" << std::endl;
+                    data[data.find(':')] = '#';
+                    outFile << "<a href=\"" << data << "\">" << text << "</a>\n";
                 } else if (link->type == DocumentPart::Link::Type::Web) {
-                    outFile << "<a href=\"" << link->data << "\">" << text << "</a>" << std::endl;
+                    outFile << "<a href=\"" << link->data << "\">" << text << "</a>\n";
                 }
 
                 break;
             }
             case DocumentPart::Type::Table: {
                 auto table = part->table();
-                outFile << "<figure" << id(table) << ">" << std::endl;
+                outFile << "<figure" << id(table) << ">\n";
                 writeTable(outFile, table);
                 auto title = _titleData.find(table->location);
                 if (title != _titleData.end()) {
@@ -573,12 +579,12 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     }
                     writeDocumentParts(outFile, title->second.text.text, isGenerated);
                     if (!isGenerated) {
-                        outFile << "</span>" << std::endl;
+                        outFile << "</span>\n";
                     }
-                    outFile << "</figcaption>" << std::endl;
+                    outFile << "</figcaption>\n";
                 }
 
-                outFile << "</figure>" << std::endl;
+                outFile << "</figure>\n";
                 break;
             }
             default:
@@ -588,7 +594,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
     }
 
     if (paragraphOpen) {
-        outFile << "</p>" << std::endl;
+        outFile << "</p>\n";
         paragraphOpen = false;
     }
 }
@@ -600,7 +606,7 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList& parameters
 
     if (inputFile != parameters.end()) {
         outputFileName = inputFile->second.value;
-        _nameBase      = outputFileName.substr(0, outputFileName.find_last_of("."));
+        _nameBase      = outputFileName.substr(0, outputFileName.find_last_of('.'));
         outputFileName = _nameBase + ".html";
     }
 
@@ -651,25 +657,25 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList& parameters
     std::stringstream head;
     std::stringstream body;
 
-    head << "<meta charset=\"utf-8\">" << std::endl;
+    head << "<meta charset=\"utf-8\">\n";
     if (document.metaData().find("title") != document.metaData().end()) {
-        head << "<title>" + document.metaData().at("title").data.front().value + "</title>" << std::endl;
+        head << "<title>" + document.metaData().at("title").data.front().value + "</title>\n";
     } else {
-        head << "<title>[No title]</title>" << std::endl;
+        head << "<title>[No title]</title>\n";
     }
 
-    head << "<style>" << std::endl;
-    head << codeHighlightCSS << std::endl;
-    head << generalCSS << std::endl;
-    head << "</style>" << std::endl;
+    head << "<style>\n";
+    head << codeHighlightCSS << "\n";
+    head << generalCSS << "\n";
+    head << "</style>\n";
 
-    head << "<script>" << std::endl;
-    head << scripts << std::endl;
-    head << "</script>" << std::endl;
-    head << "<script>" << std::endl;
-    head << codeHighlightScript << std::endl;
-    head << "</script>" << std::endl;
-    head << "<script>hljs.initHighlightingOnLoad();</script>" << std::endl;
+    head << "<script>\n";
+    head << scripts << "\n";
+    head << "</script>\n";
+    head << "<script>\n";
+    head << codeHighlightScript << "\n";
+    head << "</script>\n";
+    head << "<script>hljs.initHighlightingOnLoad();</script>\n";
 
     prepare(document.parts());
     writeDocumentParts(body, document.parts());

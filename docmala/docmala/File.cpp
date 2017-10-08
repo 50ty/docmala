@@ -20,8 +20,11 @@
  */
 #include "File.h"
 
+#include <utility>
+
 using namespace docmala;
-IFile::~IFile() {}
+
+IFile::~IFile() = default;
 
 MemoryFile::MemoryFile(const std::string& data, const std::string& fileName)
     : _data(data)
@@ -86,7 +89,8 @@ char MemoryFile::_getch() {
     _position++;
     if (c == '\r') {
         return _getch();
-    } else if (previous() == '\n') {
+    }
+    if (previous() == '\n') {
         _line++;
         _column = 0;
     } else {
@@ -96,8 +100,9 @@ char MemoryFile::_getch() {
 }
 
 File::File(const std::string& fileName) {
-    if (fileName.empty() || fileName.back() == '\\' || fileName.back() == '/')
+    if (fileName.empty() || fileName.back() == '\\' || fileName.back() == '/') {
         return;
+    }
 
     _fileName = fileName;
 

@@ -71,7 +71,7 @@ public:
      * @brief Get the list of errors, occured during the last process or postProcess call
      * @return List of errors
      */
-    virtual const std::vector<Error> lastErrors() const {
+    virtual std::vector<Error> lastErrors() const {
         return std::vector<Error>();
     }
 };

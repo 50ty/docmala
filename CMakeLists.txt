@@ -65,7 +65,7 @@ if(DOCMALA_ENABLE_CLANG_TIDY)
         )
     if(CLANG_TIDY_EXE)
         message(STATUS "Enable clang-tidy: ${CLANG_TIDY_EXE}")
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}" "-fix" "-checks=*,-cppcoreguidelines-pro-bounds-*,-cppcoreguidelines-pro-type-vararg,-google-build-using-namespace,-google-runtime-references")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}" "-fix" "-checks=*,-cppcoreguidelines-pro-bounds-*,-cppcoreguidelines-pro-type-vararg,-google-build-using-namespace,-google-runtime-references,-modernize-pass-by-value,-readability-implicit-bool-cast")
     endif()
 endif()
 

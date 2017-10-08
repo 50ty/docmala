@@ -18,10 +18,11 @@
         You should have received a copy of the GNU Lesser General Public License
         along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-#include <extension_system/Extension.hpp>
 #include <docmala/DocmaPlugin.h>
 #include <docmala/Docmala.h>
 #include <docmala/File.h>
+#include <extension_system/Extension.hpp>
+#include <memory>
 #include <sstream>
 
 using namespace docmala;
@@ -34,7 +35,7 @@ public:
 
     enum class ReadCellResult { CellContent, NextRow, HeadlinesAbove, RowHeadlinesOnLeft, EndOfTable, SpanModifier };
 
-    const std::vector<Error> lastErrors() const override {
+    std::vector<Error> lastErrors() const override {
         return _errors;
     }
 
@@ -42,7 +43,7 @@ public:
     std::unique_ptr<MemoryFile> _file;
     std::vector<Error>          _errors;
 
-    void addCell(size_t& currentCol, const size_t currentRow, const DocumentPart::Table::Cell& cell, DocumentPart::Table& table);
+    void addCell(size_t& currentCol, size_t currentRow, const DocumentPart::Table::Cell& cell, DocumentPart::Table& table);
     void ensureTableSize(DocumentPart::Table& table, size_t cols, size_t rows);
 
     void adjustTableSize(DocumentPart::Table& table);
@@ -63,7 +64,7 @@ void TablePlugin::ensureTableSize(DocumentPart::Table& table, size_t cols, size_
     if (table.rows < rows) {
         table.rows = rows;
         while (table.cells.size() < table.rows) {
-            table.cells.push_back({});
+            table.cells.emplace_back();
             table.cells.back().resize(table.columns, DocumentPart::Table::Cell());
         }
     }
@@ -106,11 +107,11 @@ void TablePlugin::adjustTableSize(DocumentPart::Table& table) {
     // if the current row is longer than the prevously seen ones
     if (table.columns < cols) {
         table.columns = table.columns > cols ? table.columns : cols;
-        if (table.cells.size() != 0) {
+        if (!table.cells.empty()) {
             // fill rows with empty cells
             for (auto& row : table.cells) {
                 while (row.size() < table.columns) {
-                    row.push_back(DocumentPart::Table::Cell());
+                    row.emplace_back();
                 }
             }
         }
@@ -119,10 +120,10 @@ void TablePlugin::adjustTableSize(DocumentPart::Table& table) {
 
 bool TablePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     _errors.clear();
-    _file.reset(new MemoryFile(block, location.fileName));
+    _file = std::make_unique<MemoryFile>(block, location.fileName);
 
     DocumentPart::Table table(location);
-    table.cells.push_back(std::vector<DocumentPart::Table::Cell>());
+    table.cells.emplace_back();
 
     std::string               spanModifier;
     DocumentPart::Table::Cell hiddenCellPrototype;
@@ -136,7 +137,8 @@ bool TablePlugin::process(const ParameterList& parameters, const FileLocation& l
 
         if (readCellResult == ReadCellResult::EndOfTable) {
             break;
-        } else if (readCellResult == ReadCellResult::CellContent) {
+        }
+        if (readCellResult == ReadCellResult::CellContent) {
             FileLocation tableLocation = _file->location();
             tableLocation.line += location.line + 1;
             tableLocation.column -= cellContent.length();
@@ -148,7 +150,7 @@ bool TablePlugin::process(const ParameterList& parameters, const FileLocation& l
             //            ft.text = cellContent;
             //            text.text.push_back(ft);
             DocumentPart::Table::Cell cell;
-            cell.content.push_back(text);
+            cell.content.emplace_back(text);
 
             if (!spanModifier.empty()) {
                 std::istringstream stream(spanModifier);
@@ -213,11 +215,11 @@ TablePlugin::ReadCellResult TablePlugin::readNextCell(std::string& cellContent) 
                 if (c == ':' || (c >= '0' && c <= '9')) {
                     cellContent.push_back(c);
                     continue;
-                } else if (c == ' ' || c == '\t') {
-                    return ReadCellResult::SpanModifier;
-                } else {
-                    break;
                 }
+                if (c == ' ' || c == '\t') {
+                    return ReadCellResult::SpanModifier;
+                }
+                break;
             }
         }
 
@@ -226,13 +228,13 @@ TablePlugin::ReadCellResult TablePlugin::readNextCell(std::string& cellContent) 
                 char c = _file->getch();
                 if (c == '=') {
                     continue;
-                } else if (c == '\n') {
-                    return ReadCellResult::HeadlinesAbove;
-                } else {
-                    _errors.push_back({_file->location(),
-                                       std::string("Invalid character in headline separator: '") + c + "'. Only '=' and newline is allowed."});
+                }
+                if (c == '\n') {
                     return ReadCellResult::HeadlinesAbove;
                 }
+                _errors.emplace_back(_file->location(),
+                                     std::string("Invalid character in headline separator: '") + c + "'. Only '=' and newline is allowed.");
+                return ReadCellResult::HeadlinesAbove;
             }
             return ReadCellResult::EndOfTable;
         }
