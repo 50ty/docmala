@@ -40,10 +40,24 @@ public:
     };
 
     virtual ~DocumentPlugin();
+
+    /**
+     * @brief Defines the block processing mode of this plugin
+     * @return Requested block processing mode.
+     */
     virtual BlockProcessing blockProcessing() const {
         return BlockProcessing::No;
     }
-    virtual bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block = "") = 0;
+
+    /**
+     * @brief Execute plugin
+     * @param parameters Parameters for plugin execution
+     * @param location Location of plugin tag
+     * @param document Document thats content may be changed by the plugin
+     * @param block Content of the plugins data block if blockProcessing is 'Required' or 'Optional'
+     * @return A list of errors occured during plugin execution. If the list is empty plugin execution is assumed successful.
+     */
+    virtual std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block = "") = 0;
 
     /**
      * @brief Returns the post processing mode, a plugin requests
@@ -60,19 +74,11 @@ public:
      * @param document
      * @return true, if the document has been changed by post processing, false otherwise
      */
-    virtual bool postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) {
+    virtual std::vector<Error> postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) {
         (void)parameters;
         (void)location;
         (void)document;
-        return true;
-    }
-
-    /**
-     * @brief Get the list of errors, occured during the last process or postProcess call
-     * @return List of errors
-     */
-    virtual std::vector<Error> lastErrors() const {
-        return std::vector<Error>();
+        return {};
     }
 };
 DocumentPlugin::~DocumentPlugin() {}

@@ -30,13 +30,8 @@ class ImagePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
+    std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
-    std::vector<Error> lastErrors() const override {
-        return _errors;
-    }
-
-    std::vector<Error>                                   _errors;
     std::unordered_map<std::string, DocumentPart::Image> _cache;
 };
 
@@ -44,18 +39,20 @@ DocumentPlugin::BlockProcessing ImagePlugin::blockProcessing() const {
     return BlockProcessing::No;
 }
 
-bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
+std::vector<Error> ImagePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     (void)block;
 
-    _errors.clear();
+    std::vector<Error> errors;
+
+    errors.clear();
     std::string inputFile;
 
     auto inFileIter = parameters.find("inputFile");
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
-        return false;
+        errors.emplace_back(location, "Parameter 'inputFile' is missing.");
+        return errors;
     }
 
     std::string baseDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
@@ -65,8 +62,8 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     if (fileNameIter != parameters.end()) {
         fileName = baseDir + "/" + fileNameIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'file' is missing.");
-        return false;
+        errors.emplace_back(location, "Parameter 'file' is missing.");
+        return errors;
     }
 
     std::string fileExtension;
@@ -74,8 +71,8 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     if (pos != std::string::npos) {
         fileExtension = fileName.substr(pos + 1);
     } else {
-        _errors.emplace_back(location, "Unable to determine file type.");
-        return false;
+        errors.emplace_back(location, "Unable to determine file type.");
+        return errors;
     }
 
     std::string imageData;
@@ -88,7 +85,7 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
         highlightReader.read(&imageData[0], static_cast<std::streamsize>(imageData.size()));
         highlightReader.close();
     } else {
-        _errors.emplace_back(location, "Unable to open file '" + fileName + "'.");
+        errors.emplace_back(location, "Unable to open file '" + fileName + "'.");
     }
 
     std::string format = fileExtension;
@@ -105,7 +102,7 @@ bool ImagePlugin::process(const ParameterList& parameters, const FileLocation& l
     _cache.insert(std::make_pair(block, image));
     document.addPart(image);
 
-    return true;
+    return errors;
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, ImagePlugin, "image", 1, "Insert an image into the document", EXTENSION_SYSTEM_NO_USER_DATA)

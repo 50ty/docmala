@@ -31,13 +31,9 @@ class TablePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
+    std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
     enum class ReadCellResult { CellContent, NextRow, HeadlinesAbove, RowHeadlinesOnLeft, EndOfTable, SpanModifier };
-
-    std::vector<Error> lastErrors() const override {
-        return _errors;
-    }
 
     ReadCellResult              readNextCell(std::string& cellContent);
     std::unique_ptr<MemoryFile> _file;
@@ -118,9 +114,9 @@ void TablePlugin::adjustTableSize(DocumentPart::Table& table) {
     }
 }
 
-bool TablePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
+std::vector<Error> TablePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     _errors.clear();
-    _file = std::make_unique<MemoryFile>(block, location.fileName);
+    _file = std::make_unique<MemoryFile>(block, location);
 
     DocumentPart::Table table(location);
     table.cells.emplace_back();
@@ -192,7 +188,7 @@ bool TablePlugin::process(const ParameterList& parameters, const FileLocation& l
     (void)location;
     (void)document;
     (void)parameters;
-    return true;
+    return _errors;
 }
 
 TablePlugin::ReadCellResult TablePlugin::readNextCell(std::string& cellContent) {

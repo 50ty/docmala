@@ -182,16 +182,14 @@ void Docmala::doPostprocessing() {
         documentChanged = false;
         for (auto& post : _registeredPostprocessing) {
             if (post.plugin->postProcessing() == DocumentPlugin::PostProcessing::DocumentChanged || !post.processed) {
-                if (post.plugin->postProcess(post.parameters, post.location, _document)) {
-                    documentChanged = true;
-                    auto errors     = post.plugin->lastErrors();
-                    if (!errors.empty()) {
-                        for (auto& error : errors) {
-                            error.message = "    " + error.message;
-                        }
-                        _errors.emplace_back(post.location, "Errors occured during plugin execution");
-                        _errors.insert(_errors.end(), errors.begin(), errors.end());
+                documentChanged = true;
+                auto errors     = post.plugin->postProcess(post.parameters, post.location, _document);
+                if (!errors.empty()) {
+                    for (auto& error : errors) {
+                        error.message = "    " + error.message;
                     }
+                    _errors.emplace_back(post.location, "Errors occured during plugin execution");
+                    _errors.insert(_errors.end(), errors.begin(), errors.end());
                 }
                 post.processed = true;
             }
@@ -364,8 +362,7 @@ bool Docmala::readPlugin() {
         if (!readBlock(block)) {
             return false;
         }
-        plugin->process(parameters, nameBegin, _document, block);
-        auto errors = plugin->lastErrors();
+        auto errors = plugin->process(parameters, nameBegin, _document, block);
         if (!errors.empty()) {
             for (auto& error : errors) {
                 error.message = "    " + error.message;
@@ -375,8 +372,7 @@ bool Docmala::readPlugin() {
         }
 
     } else {
-        plugin->process(parameters, nameBegin, _document, "");
-        auto errors = plugin->lastErrors();
+        auto errors = plugin->process(parameters, nameBegin, _document, "");
         if (!errors.empty()) {
             for (auto& error : errors) {
                 error.message = "    " + error.message;

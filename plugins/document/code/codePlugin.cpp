@@ -28,18 +28,14 @@ class CodePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
-    std::vector<Error> errors() const {
-        return _errors;
-    }
-    std::vector<Error> _errors;
+    std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 };
 
 DocumentPlugin::BlockProcessing CodePlugin::blockProcessing() const {
     return BlockProcessing::Required;
 }
 
-bool CodePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
+std::vector<Error> CodePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     (void)block;
     (void)location;
     (void)document;
@@ -55,7 +51,7 @@ bool CodePlugin::process(const ParameterList& parameters, const FileLocation& lo
     code.code = block;
     document.addPart(code);
 
-    return true;
+    return {};
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, CodePlugin, "code", 1, "Adds code from subsequent block to document", EXTENSION_SYSTEM_NO_USER_DATA)
