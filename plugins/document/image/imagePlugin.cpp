@@ -44,7 +44,6 @@ std::vector<Error> ImagePlugin::process(const ParameterList& parameters, const F
 
     std::vector<Error> errors;
 
-    errors.clear();
     std::string inputFile;
 
     auto inFileIter = parameters.find("inputFile");
