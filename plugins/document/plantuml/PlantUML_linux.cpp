@@ -54,13 +54,9 @@ public:
     ~PlantUMLPlugin() override;
 
     BlockProcessing blockProcessing() const override;
-    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
-    std::vector<Error> lastErrors() const override {
-        return _errors;
-    }
-    bool initHost(const ParameterList& parameters, const FileLocation& location);
+    std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
+    std::vector<Error> initHost(const ParameterList& parameters, const FileLocation& location);
 
-    std::vector<Error>                                   _errors;
     std::unordered_map<std::string, DocumentPart::Image> _cache;
 
     int _stdInPipe[2]  = {0};
@@ -82,9 +78,9 @@ DocumentPlugin::BlockProcessing PlantUMLPlugin::blockProcessing() const {
     return BlockProcessing::Required;
 }
 
-bool PlantUMLPlugin::initHost(const ParameterList& parameters, const FileLocation& location) {
+std::vector<Error> PlantUMLPlugin::initHost(const ParameterList& parameters, const FileLocation& location) {
     if (_hostInitialized) {
-        return true;
+        return {};
     }
 
     std::string pluginDir;
@@ -102,8 +98,7 @@ bool PlantUMLPlugin::initHost(const ParameterList& parameters, const FileLocatio
     pid_t                      pid = 0;
 
     if ((pipe(_stdInPipe) != 0) || (pipe(_stdOutPipe) != 0) || (pipe(_stdErrPipe) != 0)) {
-        _errors.emplace_back(location, "Internal: Unable to create pipes");
-        return false;
+        return {{location, "Internal: Unable to create pipes"}};
     }
 
     posix_spawn_file_actions_init(&action);
@@ -118,8 +113,7 @@ bool PlantUMLPlugin::initHost(const ParameterList& parameters, const FileLocatio
     posix_spawn_file_actions_addclose(&action, _stdErrPipe[0]);
 
     if (posix_spawnp(&pid, args[0], &action, nullptr, &args[0], nullptr) != 0) {
-        _errors.emplace_back(location, "Internal: Unable start plantuml host.");
-        return false;
+        return {{location, "Internal: Unable start plantuml host."}};
     }
 
     close(_stdInPipe[0]);
@@ -128,18 +122,18 @@ bool PlantUMLPlugin::initHost(const ParameterList& parameters, const FileLocatio
 
     int retval = fcntl(_stdErrPipe[0], F_SETFL, fcntl(_stdErrPipe[0], F_GETFL) | O_NONBLOCK);
     if (retval == -1) {
-        _errors.emplace_back(location, "Internal: Unable to configure stderr pipe");
-        return false;
+        return {{location, "Internal: Unable to configure stderr pipe"}};
     }
 
     _hostInitialized = true;
-    return true;
+    return {};
 }
 
-bool PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
-    _errors.clear();
-    if (!initHost(parameters, location)) {
-        return false;
+std::vector<Error> PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
+    auto initHostErrors = initHost(parameters, location);
+
+    if( !initHostErrors.empty() ){
+        return initHostErrors;
     }
 
     auto cachePosition = _cache.find(block);
@@ -148,7 +142,7 @@ bool PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation
         DocumentPart::Image image = cachePosition->second;
         image.location            = location;
         document.addPart(image);
-        return true;
+        return {};
     }
 
     std::string outFile = "@startuml\n";
@@ -163,7 +157,7 @@ bool PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation
     ssize_t readBytes = read(_stdOutPipe[0], &length, 4);
 
     if (readBytes != 4) {
-        return false;
+        return {{location, "Protocol error while communicating with plantUml host"}};
     }
 
     size_t pos = 0;
@@ -208,7 +202,7 @@ bool PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation
                 try {
                     lineNumber = std::stoi(errorInfo[1]);
                 } catch (...) {
-                    return false;
+                    return {{location, "Protocol error while reading an error from plantUml host"}};
                 }
             }
 
@@ -217,14 +211,13 @@ bool PlantUMLPlugin::process(const ParameterList& parameters, const FileLocation
             }
             FileLocation l = location;
             l.line += lineNumber + 1;
-            _errors.emplace_back(l, errorText);
-            return false;
+            return {{l, errorText}};
         }
     }
 
     _cache.insert(std::make_pair(block, image));
 
-    return true;
+    return {};
 }
 
 EXTENSION_SYSTEM_EXTENSION(

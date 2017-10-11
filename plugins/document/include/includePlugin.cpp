@@ -30,20 +30,15 @@ class IncludePlugin : public DocumentPlugin {
     // DocmaPlugin interface
 public:
     BlockProcessing blockProcessing() const override;
-    bool process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
+    std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
-    PostProcessing postProcessing() const override;
-    bool           postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) override;
+    PostProcessing     postProcessing() const override;
+    std::vector<Error> postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) override;
 
     static void escapeFileName(std::string& fileName) {
         std::replace(fileName.begin(), fileName.end(), '.', '_');
     }
 
-    std::vector<Error> lastErrors() const override {
-        return _errors;
-    }
-
-    std::vector<Error>       _errors;
     std::unique_ptr<Docmala> parser;
     void                     updateDocumentParts(const std::string&               identifier,
                                                  DocumentPart::GeneratedDocument& out,
@@ -84,10 +79,8 @@ void IncludePlugin::updateDocumentParts(const std::string&               identif
     }
 }
 
-bool IncludePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
+std::vector<Error> IncludePlugin::process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) {
     (void)block;
-
-    _errors.clear();
 
     std::string pluginDir     = "./plugins";
     auto        pluginDirIter = parameters.find("pluginDir");
@@ -103,8 +96,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
-        return false;
+        return {{location, "Parameter 'inputFile' is missing."}};
     }
 
     std::string baseDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
@@ -114,8 +106,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
     if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'file' is missing.");
-        return false;
+        return {{location, "Parameter 'file' is missing."}};
     }
 
     std::string identifier     = includeFile;
@@ -135,7 +126,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
 
     parser->parseFile(baseDir + "/" + includeFile);
 
-    _errors                                   = parser->errors();
+    auto errors                               = parser->errors();
     auto                            doc       = parser->document();
     int                             baseLevel = 1;
     DocumentPart::GeneratedDocument generated(location);
@@ -153,7 +144,7 @@ bool IncludePlugin::process(const ParameterList& parameters, const FileLocation&
 
     document.addPart(generated);
 
-    return true;
+    return errors;
 }
 
 DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const {
@@ -186,9 +177,7 @@ void IncludePlugin::postProcessParts(const std::string& identifier, std::vector<
     }
 }
 
-bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) {
-    _errors.clear();
-
+std::vector<Error> IncludePlugin::postProcess(const ParameterList& parameters, const FileLocation& location, Document& document) {
     std::string includeFile;
     std::string inputFile;
 
@@ -196,8 +185,7 @@ bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocat
     if (inFileIter != parameters.end()) {
         inputFile = inFileIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'inputFile' is missing.");
-        return false;
+        return {{location, "Parameter 'inputFile' is missing."}};
     }
 
     std::string baseDir = inputFile.substr(0, inputFile.find_last_of("\\/"));
@@ -207,8 +195,7 @@ bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocat
     if (includeFileIter != parameters.end()) {
         includeFile = includeFileIter->second.value;
     } else {
-        _errors.emplace_back(location, "Parameter 'file' is missing.");
-        return false;
+        return {{location, "Parameter 'file' is missing."}};
     }
 
     std::string identifier     = includeFile;
@@ -219,7 +206,7 @@ bool IncludePlugin::postProcess(const ParameterList& parameters, const FileLocat
     }
 
     postProcessParts(identifier, document.parts());
-    return true;
+    return {};
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::DocumentPlugin, IncludePlugin, "include", 1, "Include a file into an other one", EXTENSION_SYSTEM_NO_USER_DATA)
