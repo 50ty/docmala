@@ -132,12 +132,12 @@ struct List {
     enum class Type { Points, Dashes, Numbered };
 
     List() {}
-    List(const Text& text, Type type, int level)
-        : entries({{text, type, level}}) {}
+    List(const Text& text, Type type)
+        : entries({{text, type, {}}}) {}
     struct Entry {
         Text text;
         Type type  = Type::Points;
-        int  level = 0;
+        std::vector<Entry> entries;
     };
     std::vector<Entry> entries;
 };

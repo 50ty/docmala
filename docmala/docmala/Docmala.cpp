@@ -1198,10 +1198,17 @@ bool Docmala::readList(DocumentPart::List::Type type) {
 
             auto list = _document.last<DocumentPart::List>();
             if (list) {
-                list->entries.push_back({text, type, level});
+                std::vector<DocumentPart::List::Entry>* entries = &list->entries;
+                for (int i = 1; i < level; i++) {
+                    if (entries->empty()) {
+                        entries->push_back({{}, type, {}});
+                    }
+                    entries = &entries->back().entries;
+                }
+                entries->push_back({text, type, {}});
                 return true;
             }
-            _document.addPart(DocumentPart::List(text, type, level));
+            _document.addPart(DocumentPart::List(text, type));
             return true;
         }
     }

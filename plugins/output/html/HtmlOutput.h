@@ -45,11 +45,8 @@ private:
     void writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart::Variant>& documentParts, bool isGenerated = false);
 
     void writeTable(std::stringstream& outFile, const DocumentPart::Table& table);
-    void writeList(std::stringstream&                                  outFile,
-                   std::vector<DocumentPart::Variant>::const_iterator& start,
-                   const std::vector<DocumentPart::Variant>&           documentParts,
-                   bool                                                isGenerated,
-                   int                                                 currentLevel = 0);
+    void writeList(std::stringstream& outFile, const DocumentPart::List& list, bool isGenerated);
+    void writeListEntries(std::stringstream& outFile, const std::vector<DocumentPart::List::Entry>& entries, bool isGenerated);
 
     unsigned int         _imageCounter                       = 1;
     unsigned int         _figureCounter                      = 1;

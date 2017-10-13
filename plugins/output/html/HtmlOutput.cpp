@@ -39,11 +39,11 @@ std::string base64_encode(const std::string& inputData) {
     unsigned char char_array_4[4];
 
     for (char data : inputData) {
-        char_array_3[i++] = data;
+        char_array_3[i++] = static_cast<unsigned char>(data);
         if (i == 3) {
             char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+            char_array_4[1] = static_cast<unsigned char>(((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4));
+            char_array_4[2] = static_cast<unsigned char>(((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6));
             char_array_4[3] = char_array_3[2] & 0x3f;
 
             for (i = 0; (i < 4); i++) {
@@ -59,8 +59,8 @@ std::string base64_encode(const std::string& inputData) {
         }
 
         char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6);
+        char_array_4[1] = static_cast<unsigned char>(((char_array_3[0] & 0x03) << 4) + ((char_array_3[1] & 0xf0) >> 4));
+        char_array_4[2] = static_cast<unsigned char>(((char_array_3[1] & 0x0f) << 2) + ((char_array_3[2] & 0xc0) >> 6));
         char_array_4[3] = char_array_3[2] & 0x3f;
 
         for (j = 0; (j < i + 1); j++) {
@@ -88,39 +88,7 @@ using namespace docmala;
 class HtmlOutputPlugin : public OutputPlugin {
     // OutputPlugin interface
 public:
-    bool write(const ParameterList& parameters, const Document& document) override {
-        std::string nameBase       = "outfile";
-        std::string outputFileName = "outfile.html";
-
-        auto inputFile = parameters.find("inputFile");
-
-        if (inputFile != parameters.end()) {
-            outputFileName = inputFile->second.value;
-            nameBase       = outputFileName.substr(0, outputFileName.find_last_of('.'));
-            outputFileName = nameBase + ".html";
-        }
-
-        std::ofstream outFile;
-
-        outFile.open(outputFileName);
-
-        if (outFile.is_open()) {
-            HtmlOutput output;
-            auto       html = output.produceHtml(parameters, document);
-
-            outFile << "<!doctype html>\n";
-            outFile << "<html>\n";
-            outFile << "<head>\n";
-            outFile << html.head << "\n";
-            outFile << "</head>\n";
-
-            outFile << "<body>\n";
-            outFile << html.body << "\n";
-            outFile << "</body>\n";
-            return true;
-        }
-        return false;
-    }
+    bool write(const ParameterList& parameters, const Document& document) override;
 };
 
 void replaceAll(std::string& source, const std::string& from, const std::string& to) {
@@ -244,55 +212,37 @@ void HtmlOutput::writeTable(std::stringstream& outFile, const DocumentPart::Tabl
     outFile << "</table>\n";
 }
 
-void HtmlOutput::writeList(std::stringstream&                                  outFile,
-                           std::vector<DocumentPart::Variant>::const_iterator& start,
-                           const std::vector<DocumentPart::Variant>&           documentParts,
-                           bool                                                isGenerated,
-                           int                                                 currentLevel) {
-    /*    auto list = boost::get<DocumentPart::List>(&*start);
-        if (currentLevel < list->level) {
-            std::string type = "ul";
-            std::string style;
-            switch (list->type) {
-                case DocumentPart::List::Type::Points:
-                    type = "ul";
-                    break;
-                case DocumentPart::List::Type::Dashes:
-                    type  = "ul";
-                    style = "class=\"dash\"";
-                    break;
-                case DocumentPart::List::Type::Numbered:
-                    type = "ol";
-                    break;
-            }
+void HtmlOutput::writeListEntries(std::stringstream& outFile, const std::vector<DocumentPart::List::Entry>& entries, bool isGenerated) {
+    if (entries.empty())
+        return;
 
-            currentLevel++;
-            outFile << "<" << type << " " << style << ">\n";
-            while (true) {
-                writeList(outFile, start, documentParts, isGenerated, currentLevel);
-                if (start + 1 == documentParts.end() || !boost::get<DocumentPart::List>(&*(start + 1))
-                    || boost::get<DocumentPart::List>(*(start + 1)).level < currentLevel) {
-                    break;
-                }
-                start++;
-            }
-            outFile << "</" << type << ">\n";
-            currentLevel--;
-        } else if (currentLevel == list->level) {
-            for (auto entry = list->entries.begin(); entry != list->entries.end(); entry++) {
-                outFile << "<li> ";
-                writeDocumentParts(outFile, {*entry}, isGenerated);
-                if (entry == list->entries.end() - 1) {
-                    if (start + 1 != documentParts.end() && boost::get<DocumentPart::List>(&*(start + 1))
-                        && boost::get<DocumentPart::List>(*(start + 1)).level > currentLevel) {
-                        start++;
-                        writeList(outFile, start, documentParts, isGenerated, currentLevel);
-                    }
-                }
-                outFile << " </li>\n";
-            }
-        }
-        */
+    std::string type = "ul";
+    std::string style;
+    switch (entries.front().type) {
+        case DocumentPart::List::Type::Points:
+            type = "ul";
+            break;
+        case DocumentPart::List::Type::Dashes:
+            type  = "ul";
+            style = "class=\"dash\"";
+            break;
+        case DocumentPart::List::Type::Numbered:
+            type = "ol";
+            break;
+    }
+    outFile << "<" << type << " " << style << ">\n";
+
+    for (const auto& entry : entries) {
+        outFile << "<li> ";
+        writeDocumentParts(outFile, {entry.text}, isGenerated);
+        writeListEntries(outFile, entry.entries, isGenerated);
+        outFile << " </li>\n";
+    }
+    outFile << "</" << type << ">\n";
+}
+
+void HtmlOutput::writeList(std::stringstream& outFile, const DocumentPart::List& list, bool isGenerated) {
+    writeListEntries(outFile, list.entries, isGenerated);
 }
 
 void HtmlOutput::prepare(const std::vector<DocumentPart::Variant>& documentParts) {
@@ -476,7 +426,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             outFile << "</figure>\n";
             _imageCounter++;
         },
-        [&](const DocumentPart::List& list) { writeList(outFile, part, documentParts, isGenerated); },
+        [&](const DocumentPart::List& list) { writeList(outFile, list, isGenerated); },
         [&](const DocumentPart::GeneratedDocument& doc) {
             outFile << "<div " << id(doc) << ">\n";
             writeDocumentParts(outFile, doc.document, true);
@@ -660,6 +610,42 @@ HtmlOutput::HtmlDocument HtmlOutput::produceHtml(const ParameterList& parameters
     html.head = head.str();
     html.body = body.str();
     return html;
+}
+
+
+
+bool HtmlOutputPlugin::write(const ParameterList &parameters, const Document &document) {
+    std::string nameBase       = "outfile";
+    std::string outputFileName = "outfile.html";
+
+    auto inputFile = parameters.find("inputFile");
+
+    if (inputFile != parameters.end()) {
+        outputFileName = inputFile->second.value;
+        nameBase       = outputFileName.substr(0, outputFileName.find_last_of('.'));
+        outputFileName = nameBase + ".html";
+    }
+
+    std::ofstream outFile;
+
+    outFile.open(outputFileName);
+
+    if (outFile.is_open()) {
+        HtmlOutput output;
+        auto       html = output.produceHtml(parameters, document);
+
+        outFile << "<!doctype html>\n";
+        outFile << "<html>\n";
+        outFile << "<head>\n";
+        outFile << html.head << "\n";
+        outFile << "</head>\n";
+
+        outFile << "<body>\n";
+        outFile << html.body << "\n";
+        outFile << "</body>\n";
+        return true;
+    }
+    return false;
 }
 
 EXTENSION_SYSTEM_EXTENSION(docmala::OutputPlugin, HtmlOutputPlugin, "html", 1, "Write document to a HTML file", EXTENSION_SYSTEM_NO_USER_DATA)
