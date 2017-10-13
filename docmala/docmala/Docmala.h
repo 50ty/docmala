@@ -72,7 +72,7 @@ public:
 private:
     bool parse();
     void doPostprocessing();
-    void postProcessPartList(const std::vector<DocumentPart>& parts);
+    void postProcessPartList(const std::vector<DocumentPart::Variant>& parts);
     void checkConsistency();
 
     bool readHeadLine();

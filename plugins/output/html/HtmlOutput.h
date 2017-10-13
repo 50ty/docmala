@@ -40,22 +40,23 @@ public:
     HtmlDocument produceHtml(const ParameterList& parameters, const Document& document, const std::string& scripts = "");
 
 private:
-    void prepare(const std::vector<DocumentPart>& documentParts);
+    void prepare(const std::vector<DocumentPart::Variant>& documentParts);
 
-    void writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart>& documentParts, bool isGenerated = false);
+    void writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart::Variant>& documentParts, bool isGenerated = false);
 
-    void writeTable(std::stringstream& outFile, const DocumentPart::Table* table);
-    void writeList(std::stringstream&                         outFile,
-                   std::vector<DocumentPart>::const_iterator& start,
-                   const std::vector<DocumentPart>&           documentParts,
-                   bool                                       isGenerated,
-                   int                                        currentLevel = 0);
+    void writeTable(std::stringstream& outFile, const DocumentPart::Table& table);
+    void writeList(std::stringstream&                                  outFile,
+                   std::vector<DocumentPart::Variant>::const_iterator& start,
+                   const std::vector<DocumentPart::Variant>&           documentParts,
+                   bool                                                isGenerated,
+                   int                                                 currentLevel = 0);
 
-    unsigned int _imageCounter       = 1;
-    unsigned int _figureCounter      = 1;
-    unsigned int _listingCounter     = 1;
-    unsigned int _tableCounter       = 1;
-    int          _headlineLevels[32] = {0};
+    unsigned int         _imageCounter                       = 1;
+    unsigned int         _figureCounter                      = 1;
+    unsigned int         _listingCounter                     = 1;
+    unsigned int         _tableCounter                       = 1;
+    static constexpr int _maxHeadlineLevels                  = 32;
+    int                  _headlineLevels[_maxHeadlineLevels] = {0};
 
     std::string _nameBase    = "outfile";
     bool        _embedImages = false;

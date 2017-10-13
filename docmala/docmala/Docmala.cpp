@@ -119,8 +119,8 @@ bool Docmala::parse() {
                 case '\t':
                     continue;
                 case '\n':
-                    if (!_document.parts().empty() && _document.parts().back().type() != DocumentPart::Type::Paragraph) {
-                        _document.addPart(DocumentPart(DocumentPart::Paragraph()));
+                    if (!_document.last<DocumentPart::Paragraph>()) {
+                        _document.addPart(DocumentPart::Paragraph());
                     }
                     continue;
                 case '=':
@@ -199,35 +199,39 @@ void Docmala::doPostprocessing() {
     postProcessPartList(_document.parts());
 }
 
-void Docmala::postProcessPartList(const std::vector<DocumentPart>& parts) {
-    for (auto part : parts) {
-        if (part.type() == DocumentPart::Type::Anchor) {
-            auto prevAnchor = _document.anchors().find(part.anchor()->name);
-            if (prevAnchor != _document.anchors().end() && prevAnchor->second.location != part.anchor()->location) {
+void Docmala::postProcessPartList(const std::vector<DocumentPart::Variant>& parts) {
+    auto visitor = make_visitor(
+        // visitors
+        [this](DocumentPart::Anchor& anchor) {
+            auto prevAnchor = _document.anchors().find(anchor.name);
+            if (prevAnchor != _document.anchors().end() && prevAnchor->second.location != anchor.location) {
                 auto      loc = prevAnchor->second.location;
                 ErrorData additionalInfo{loc,
-                                         std::string("Previous definition of '") + part.anchor()->name + "' is at " + loc.fileName + "("
+                                         std::string("Previous definition of '") + anchor.name + "' is at " + loc.fileName + "("
                                              + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
-                _errors.push_back(Error{part.anchor()->location,
-                                        std::string("Anchor with name '") + part.anchor()->name + "' already defined.",
-                                        {additionalInfo}});
+                _errors.push_back(
+                    Error{anchor.location, std::string("Anchor with name '") + anchor.name + "' already defined.", {additionalInfo}});
             }
-        } else if (part.text()) {
-            postProcessPartList(part.text()->text);
-        } else if (part.table()) {
-            for (auto row : part.table()->cells) {
+
+        },
+        [this](const DocumentPart::Text& text) { postProcessPartList(text.text); },
+        [this](const DocumentPart::Table& table) {
+            for (auto row : table.cells) {
                 for (auto cell : row) {
                     postProcessPartList(cell.content);
                 }
             }
-        }
+        },
+        [](const auto&) {});
+    for (auto part : parts) {
+        boost::apply_visitor(visitor, part);
     }
 }
 
 void Docmala::checkConsistency() {
     for (const auto& part : _document.parts()) {
-        if (part.type() == DocumentPart::Type::Link) {
-            auto link = part.link();
+        auto link = boost::get<DocumentPart::Link>(&part);
+        if (link) {
             if (link->type == DocumentPart::Link::Type::IntraFile) {
                 if (_document.anchors().find(link->data) == _document.anchors().end()) {
                     _errors.emplace_back(link->location, "Unable to find anchor for link to: '" + link->data + "'.");
@@ -1192,15 +1196,12 @@ bool Docmala::readList(DocumentPart::List::Type type) {
             DocumentPart::Text text;
             readText('\0', text);
 
-            if (!_document.empty() && _document.last().type() == DocumentPart::Type::List) {
-                if (type == _document.last().list()->type && _document.last().list()->level == level) {
-                    _document.last().list()->entries.push_back(text);
-                } else {
-                    _document.addPart(DocumentPart::List({text}, type, level));
-                }
+            auto list = _document.last<DocumentPart::List>();
+            if (list) {
+                list->entries.push_back({text, type, level});
                 return true;
             }
-            _document.addPart(DocumentPart::List({text}, type, level));
+            _document.addPart(DocumentPart::List(text, type, level));
             return true;
         }
     }
