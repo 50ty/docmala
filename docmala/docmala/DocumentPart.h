@@ -6,9 +6,9 @@
         Copyright (C) 2017 Stefan Rommel
 
         This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU Lesser General Public License as published
-   by the Free Software Foundation, either version 3 of the License, or any
-   later version.
+        it under the terms of the GNU Lesser General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        any later version.
 
         This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -28,7 +28,7 @@
 
 namespace docmala {
 
-namespace DocumentPart {
+namespace document_part {
 
 struct Text;
 struct FormatedText;
@@ -56,7 +56,7 @@ struct Table : public VisualElement {
         : VisualElement(location) {}
 
     struct Cell {
-        std::vector<DocumentPart::Variant> content;
+        std::vector<document_part::Variant> content;
 
         size_t columnSpan     = 0;
         size_t rowSpan        = 0;
@@ -108,14 +108,14 @@ struct FormatedText {
 struct GeneratedDocument : public VisualElement {
     GeneratedDocument(const FileLocation& location)
         : VisualElement(location) {}
-    std::vector<DocumentPart::Variant> document;
+    std::vector<document_part::Variant> document;
 };
 
 struct Text : public VisualElement {
     Text(const FileLocation& location = FileLocation())
         : VisualElement(location) {}
 
-    std::vector<DocumentPart::Variant> text;
+    std::vector<document_part::Variant> text;
 };
 
 struct Headline : public Text {
@@ -135,8 +135,8 @@ struct List {
     List(const Text& text, Type type)
         : entries({{text, type, {}}}) {}
     struct Entry {
-        Text text;
-        Type type  = Type::Points;
+        Text               text;
+        Type               type = Type::Points;
         std::vector<Entry> entries;
     };
     std::vector<Entry> entries;

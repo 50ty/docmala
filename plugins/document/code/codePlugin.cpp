@@ -41,7 +41,7 @@ std::vector<Error> CodePlugin::process(const ParameterList& parameters, const Fi
     (void)document;
     (void)parameters;
 
-    DocumentPart::Code code(location);
+    document_part::Code code(location);
 
     auto inFileIter = parameters.find("type");
     if (inFileIter != parameters.end()) {

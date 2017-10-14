@@ -42,11 +42,11 @@ public:
     std::unique_ptr<Docmala> parser;
 
     void updateDocumentParts(const std::string&                        identifier,
-                             DocumentPart::GeneratedDocument&          out,
-                             const std::vector<DocumentPart::Variant>& parts,
+                             document_part::GeneratedDocument&          out,
+                             const std::vector<document_part::Variant>& parts,
                              bool                                      keepHeadlineLevel,
                              int                                       baseLevel);
-    void postProcessParts(const std::string& identifier, std::vector<DocumentPart::Variant>& parts);
+    void postProcessParts(const std::string& identifier, std::vector<document_part::Variant>& parts);
 };
 
 DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
@@ -54,27 +54,27 @@ DocumentPlugin::BlockProcessing IncludePlugin::blockProcessing() const {
 }
 
 void IncludePlugin::updateDocumentParts(const std::string&                        identifier,
-                                        DocumentPart::GeneratedDocument&          out,
-                                        const std::vector<DocumentPart::Variant>& parts,
+                                        document_part::GeneratedDocument&          out,
+                                        const std::vector<document_part::Variant>& parts,
                                         bool                                      keepHeadlineLevel,
                                         int                                       baseLevel) {
     int  currentLevel = 0;
     auto visitor      = make_visitor(
         // visitors
-        [&](DocumentPart::Headline& headline) {
+        [&](document_part::Headline& headline) {
             if (!keepHeadlineLevel) {
                 headline.level += baseLevel;
                 out.document.emplace_back(headline);
                 currentLevel = headline.level;
             }
         },
-        [&](DocumentPart::Anchor& anchor) {
+        [&](document_part::Anchor& anchor) {
             anchor.name = identifier + ":" + anchor.name;
             out.document.emplace_back(anchor);
 
         },
-        [&](const DocumentPart::GeneratedDocument& doc) {
-            DocumentPart::GeneratedDocument outDoc(doc.location);
+        [&](const document_part::GeneratedDocument& doc) {
+            document_part::GeneratedDocument outDoc(doc.location);
             updateDocumentParts(identifier, outDoc, doc.document, keepHeadlineLevel, currentLevel);
             out.document.emplace_back(outDoc);
         },
@@ -136,11 +136,11 @@ IncludePlugin::process(const ParameterList& parameters, const FileLocation& loca
     auto                            errors    = parser->errors();
     auto                            doc       = parser->document();
     int                             baseLevel = 1;
-    DocumentPart::GeneratedDocument generated(location);
+    document_part::GeneratedDocument generated(location);
 
     if (!keepHeadlineLevel) {
         for (auto iter = document.parts().rbegin(); iter != document.parts().rend(); iter++) {
-            auto headline = boost::get<DocumentPart::Headline>(&(*iter));
+            auto headline = boost::get<document_part::Headline>(&(*iter));
             if (headline) {
                 baseLevel = headline->level;
                 break;
@@ -159,21 +159,21 @@ DocumentPlugin::PostProcessing IncludePlugin::postProcessing() const {
     return PostProcessing::Once;
 }
 
-void IncludePlugin::postProcessParts(const std::string& identifier, std::vector<DocumentPart::Variant>& parts) {
+void IncludePlugin::postProcessParts(const std::string& identifier, std::vector<document_part::Variant>& parts) {
 
     auto visitor = make_visitor(
         // visitors
-        [&](DocumentPart::Link& link) {
-            if (link.type == DocumentPart::Link::Type::InterFile) {
+        [&](document_part::Link& link) {
+            if (link.type == document_part::Link::Type::InterFile) {
                 std::string fileName = link.data.substr(0, link.data.find(':'));
                 if (fileName == identifier) {
-                    link.type = DocumentPart::Link::Type::IntraFile;
+                    link.type = document_part::Link::Type::IntraFile;
                 }
             }
         },
-        [&](DocumentPart::GeneratedDocument& doc) { postProcessParts(identifier, doc.document); },
-        [&](DocumentPart::Text& text) { postProcessParts(identifier, text.text); },
-        [&](const DocumentPart::Table& table) {
+        [&](document_part::GeneratedDocument& doc) { postProcessParts(identifier, doc.document); },
+        [&](document_part::Text& text) { postProcessParts(identifier, text.text); },
+        [&](const document_part::Table& table) {
             for (auto row : table.cells) {
                 for (auto cell : row) {
                     postProcessParts(identifier, cell.content);

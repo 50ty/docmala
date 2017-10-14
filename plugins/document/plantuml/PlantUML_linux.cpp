@@ -57,7 +57,7 @@ public:
     std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
     std::vector<Error> initHost(const ParameterList& parameters, const FileLocation& location);
 
-    std::unordered_map<std::string, DocumentPart::Image> _cache;
+    std::unordered_map<std::string, document_part::Image> _cache;
 
     int _stdInPipe[2]  = {0};
     int _stdOutPipe[2] = {0};
@@ -139,7 +139,7 @@ std::vector<Error> PlantUMLPlugin::process(const ParameterList& parameters, cons
     auto cachePosition = _cache.find(block);
 
     if (cachePosition != _cache.end()) {
-        DocumentPart::Image image = cachePosition->second;
+        document_part::Image image = cachePosition->second;
         image.location            = location;
         document.addPart(image);
         return {};
@@ -177,8 +177,8 @@ std::vector<Error> PlantUMLPlugin::process(const ParameterList& parameters, cons
         }
     }
 
-    DocumentPart::Text  text(location);
-    DocumentPart::Image image("svg+xml", "svg", imageData, text);
+    document_part::Text  text(location);
+    document_part::Image image("svg+xml", "svg", imageData, text);
     document.addPart(image);
 
     std::string error;

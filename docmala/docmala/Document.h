@@ -35,7 +35,7 @@ auto make_visitor(TFs&&... fs) {
 
 class Document {
 public:
-    void addPart(const DocumentPart::Variant& part) {
+    void addPart(const document_part::Variant& part) {
         _parts.push_back(part);
         addAnchors(part);
     }
@@ -63,7 +63,7 @@ public:
         return _parts.empty();
     }
 
-    DocumentPart::Variant& last() {
+    document_part::Variant& last() {
         return _parts.back();
     }
 
@@ -75,15 +75,15 @@ public:
         return boost::get<T>(&_parts.back());
     }
 
-    std::vector<DocumentPart::Variant>& parts() {
+    std::vector<document_part::Variant>& parts() {
         return _parts;
     }
 
-    const std::vector<DocumentPart::Variant>& parts() const {
+    const std::vector<document_part::Variant>& parts() const {
         return _parts;
     }
 
-    const std::map<std::string, DocumentPart::Anchor>& anchors() const {
+    const std::map<std::string, document_part::Anchor>& anchors() const {
         return _anchors;
     }
 
@@ -92,21 +92,21 @@ public:
     }
 
 private:
-    void addAnchors(const DocumentPart::Variant& part) {
+    void addAnchors(const document_part::Variant& part) {
         auto visitor = make_visitor(
             // visitors
-            [this](const DocumentPart::Anchor& anchor) { _anchors.insert(std::make_pair(anchor.name, anchor)); },
-            [this](const DocumentPart::GeneratedDocument& doc) {
+            [this](const document_part::Anchor& anchor) { _anchors.insert(std::make_pair(anchor.name, anchor)); },
+            [this](const document_part::GeneratedDocument& doc) {
                 for (const auto& p : doc.document) {
                     addAnchors(p);
                 }
             },
-            [this](const DocumentPart::Text& text) {
+            [this](const document_part::Text& text) {
                 for (const auto& p : text.text) {
                     addAnchors(p);
                 }
             },
-            [this](const DocumentPart::Table& table) {
+            [this](const document_part::Table& table) {
                 for (const auto& row : table.cells) {
                     for (const auto& cell : row) {
                         for (const auto& p : cell.content) {
@@ -119,8 +119,8 @@ private:
         boost::apply_visitor(visitor, part);
     }
 
-    std::vector<DocumentPart::Variant>          _parts;
-    std::map<std::string, DocumentPart::Anchor> _anchors;
+    std::vector<document_part::Variant>          _parts;
+    std::map<std::string, document_part::Anchor> _anchors;
     std::map<std::string, MetaData>             _metaData;
 };
 } // namespace docmala

@@ -109,14 +109,14 @@ void replaceAll(std::string& source, const std::string& from, const std::string&
     source.swap(newString);
 }
 
-std::string id(const DocumentPart::VisualElement& element) {
+std::string id(const document_part::VisualElement& element) {
     if (element.location.valid()) {
         return std::string(" id=\"line_") + std::to_string(element.location.line) + "\"";
     }
     return "";
 }
 
-void writeFormatedText(std::stringstream& outFile, const DocumentPart::FormatedText& text) {
+void writeFormatedText(std::stringstream& outFile, const document_part::FormatedText& text) {
     if (text.bold) {
         outFile << "<b>";
     }
@@ -154,7 +154,7 @@ void writeFormatedText(std::stringstream& outFile, const DocumentPart::FormatedT
     }
 }
 
-void writeCode(std::stringstream& outFile, const DocumentPart::Code& code) {
+void writeCode(std::stringstream& outFile, const document_part::Code& code) {
     if (!code.type.empty()) {
         outFile << "<pre" << id(code) << "> <code class=\"" << code.type << "\">\n";
     } else {
@@ -170,7 +170,7 @@ void writeCode(std::stringstream& outFile, const DocumentPart::Code& code) {
     outFile << "</code> </pre>\n";
 }
 
-void HtmlOutput::writeTable(std::stringstream& outFile, const DocumentPart::Table& table) {
+void HtmlOutput::writeTable(std::stringstream& outFile, const document_part::Table& table) {
     outFile << "<table>\n";
     bool firstRow = true;
     for (const auto& row : table.cells) {
@@ -212,21 +212,21 @@ void HtmlOutput::writeTable(std::stringstream& outFile, const DocumentPart::Tabl
     outFile << "</table>\n";
 }
 
-void HtmlOutput::writeListEntries(std::stringstream& outFile, const std::vector<DocumentPart::List::Entry>& entries, bool isGenerated) {
+void HtmlOutput::writeListEntries(std::stringstream& outFile, const std::vector<document_part::List::Entry>& entries, bool isGenerated) {
     if (entries.empty())
         return;
 
     std::string type = "ul";
     std::string style;
     switch (entries.front().type) {
-        case DocumentPart::List::Type::Points:
+        case document_part::List::Type::Points:
             type = "ul";
             break;
-        case DocumentPart::List::Type::Dashes:
+        case document_part::List::Type::Dashes:
             type  = "ul";
             style = "class=\"dash\"";
             break;
-        case DocumentPart::List::Type::Numbered:
+        case document_part::List::Type::Numbered:
             type = "ol";
             break;
     }
@@ -241,19 +241,19 @@ void HtmlOutput::writeListEntries(std::stringstream& outFile, const std::vector<
     outFile << "</" << type << ">\n";
 }
 
-void HtmlOutput::writeList(std::stringstream& outFile, const DocumentPart::List& list, bool isGenerated) {
+void HtmlOutput::writeList(std::stringstream& outFile, const document_part::List& list, bool isGenerated) {
     writeListEntries(outFile, list.entries, isGenerated);
 }
 
-void HtmlOutput::prepare(const std::vector<DocumentPart::Variant>& documentParts) {
+void HtmlOutput::prepare(const std::vector<document_part::Variant>& documentParts) {
     auto previous = documentParts.end();
 
     for (auto part = documentParts.begin(); part != documentParts.end(); previous = part, part++) {
-        if (auto doc = boost::get<DocumentPart::GeneratedDocument>(&*part)) {
+        if (auto doc = boost::get<document_part::GeneratedDocument>(&*part)) {
             prepare(doc->document);
         }
-        auto headline = boost::get<DocumentPart::Headline>(&*part);
-        auto caption  = boost::get<DocumentPart::Caption>(&*part);
+        auto headline = boost::get<document_part::Headline>(&*part);
+        auto caption  = boost::get<document_part::Caption>(&*part);
 
         if (headline) {
             for (int level = headline->level; level < _maxHeadlineLevels; level++) {
@@ -263,12 +263,12 @@ void HtmlOutput::prepare(const std::vector<DocumentPart::Variant>& documentParts
         }
 
         if (headline || caption) {
-            DocumentPart::Anchor const* anchor = nullptr;
+            document_part::Anchor const* anchor = nullptr;
 
             if (previous != documentParts.end()) {
-                auto previousText = boost::get<DocumentPart::Text>(&*previous);
+                auto previousText = boost::get<document_part::Text>(&*previous);
                 if (previousText && !previousText->text.empty()) {
-                    anchor = boost::get<DocumentPart::Anchor>(&previousText->text.front());
+                    anchor = boost::get<document_part::Anchor>(&previousText->text.front());
                 }
             }
 
@@ -277,19 +277,19 @@ void HtmlOutput::prepare(const std::vector<DocumentPart::Variant>& documentParts
             if (caption) {
                 auto next = part + 1;
                 if (next != documentParts.end()) {
-                    if (auto image = boost::get<DocumentPart::Image>(&*next)) {
+                    if (auto image = boost::get<document_part::Image>(&*next)) {
                         location            = image->location;
                         title.id            = "Figure " + std::to_string(_figureCounter);
                         title.text.text     = caption->text;
                         title.text.location = caption->location;
                         _figureCounter++;
-                    } else if (auto table = boost::get<DocumentPart::Table>(&*next)) {
+                    } else if (auto table = boost::get<document_part::Table>(&*next)) {
                         location            = table->location;
                         title.id            = "Table " + std::to_string(_tableCounter);
                         title.text.text     = caption->text;
                         title.text.location = caption->location;
                         _tableCounter++;
-                    } else if (auto code = boost::get<DocumentPart::Code>(&*next)) {
+                    } else if (auto code = boost::get<document_part::Code>(&*next)) {
                         location            = code->location;
                         title.id            = "Listing " + std::to_string(_listingCounter);
                         title.text.text     = caption->text;
@@ -322,14 +322,14 @@ void HtmlOutput::prepare(const std::vector<DocumentPart::Variant>& documentParts
     }
 }
 
-void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart::Variant>& documentParts, bool isGenerated) {
+void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vector<document_part::Variant>& documentParts, bool isGenerated) {
     bool paragraphOpen = false;
     auto previous      = documentParts.end();
     auto part          = documentParts.begin();
 
     auto visitor = make_visitor(
         // visitors
-        [&](const DocumentPart::Headline& headline) {
+        [&](const document_part::Headline& headline) {
             if (paragraphOpen) {
                 outFile << "</p>\n";
                 paragraphOpen = false;
@@ -349,8 +349,8 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             }
             outFile << "</h" << headline.level << ">\n";
         },
-        [&](const DocumentPart::FormatedText& text) { writeFormatedText(outFile, text); },
-        [&](const DocumentPart::Caption& caption) {
+        [&](const document_part::FormatedText& text) { writeFormatedText(outFile, text); },
+        [&](const document_part::Caption& caption) {
             if (_titleData.find(caption.location) != _titleData.end()) {
                 outFile << "<span style=\"font-size:110%;font-weight:bold;\" ";
 
@@ -366,7 +366,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 }
             }
         },
-        [&](const DocumentPart::Text& text) {
+        [&](const document_part::Text& text) {
             if (!isGenerated) {
                 outFile << "<span " << id(text) << ">";
             }
@@ -377,7 +377,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 outFile << "</span>\n";
             }
         },
-        [&](const DocumentPart::Paragraph&) {
+        [&](const document_part::Paragraph&) {
             if (paragraphOpen) {
                 outFile << "</p>\n";
                 paragraphOpen = false;
@@ -385,7 +385,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             outFile << "<p>\n";
             paragraphOpen = true;
         },
-        [&](const DocumentPart::Image& image) {
+        [&](const document_part::Image& image) {
             outFile << "<figure" << id(image) << ">\n";
             if (_embedImages) {
                 outFile << "<img src=\"data:image/" << image.format << ";base64,";
@@ -413,7 +413,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             if (title != _titleData.end()) {
                 outFile << "<figcaption>" << title->second.id << ": ";
                 if (!isGenerated) {
-                    if (auto caption = boost::get<DocumentPart::Caption>(&*previous)) {
+                    if (auto caption = boost::get<document_part::Caption>(&*previous)) {
                         outFile << "<span " << id(*caption) << ">";
                     }
                 }
@@ -426,20 +426,20 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
             outFile << "</figure>\n";
             _imageCounter++;
         },
-        [&](const DocumentPart::List& list) { writeList(outFile, list, isGenerated); },
-        [&](const DocumentPart::GeneratedDocument& doc) {
+        [&](const document_part::List& list) { writeList(outFile, list, isGenerated); },
+        [&](const document_part::GeneratedDocument& doc) {
             outFile << "<div " << id(doc) << ">\n";
             writeDocumentParts(outFile, doc.document, true);
             outFile << "</div>\n";
         },
-        [&](const DocumentPart::Code& code) {
+        [&](const document_part::Code& code) {
             outFile << "<figure" << id(code) << ">\n";
             writeCode(outFile, code);
             auto title = _titleData.find(code.location);
             if (title != _titleData.end()) {
                 outFile << "<figcaption>" << title->second.id << ": ";
                 if (!isGenerated) {
-                    if (auto caption = boost::get<DocumentPart::Caption>(&*previous)) {
+                    if (auto caption = boost::get<document_part::Caption>(&*previous)) {
                         outFile << "<span " << id(*caption) << ">";
                     }
                 }
@@ -452,8 +452,8 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
 
             outFile << "</figure>\n";
         },
-        [&](const DocumentPart::Anchor& anchor) { outFile << "<a id=\"" << escapeAnchor(anchor.name) << "\"/>\n"; },
-        [&](const DocumentPart::Link& link) {
+        [&](const document_part::Anchor& anchor) { outFile << "<a id=\"" << escapeAnchor(anchor.name) << "\"/>\n"; },
+        [&](const document_part::Link& link) {
             std::string text = link.text;
             TitleData   titleData;
 
@@ -466,7 +466,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 }
             }
 
-            if (link.type == DocumentPart::Link::Type::IntraFile) {
+            if (link.type == document_part::Link::Type::IntraFile) {
                 outFile << "<a href=\"#" << escapeAnchor(link.data) << "\">";
                 if ((text == "#" || text == "#*") && !titleData.id.empty()) {
                     outFile << titleData.id;
@@ -484,15 +484,15 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                     outFile << text;
                 }
                 outFile << "</a>\n";
-            } else if (link.type == DocumentPart::Link::Type::InterFile) {
+            } else if (link.type == document_part::Link::Type::InterFile) {
                 std::string data     = link.data;
                 data[data.find(':')] = '#';
                 outFile << "<a href=\"" << data << "\">" << text << "</a>\n";
-            } else if (link.type == DocumentPart::Link::Type::Web) {
+            } else if (link.type == document_part::Link::Type::Web) {
                 outFile << "<a href=\"" << link.data << "\">" << text << "</a>\n";
             }
         },
-        [&](const DocumentPart::Table& table) {
+        [&](const document_part::Table& table) {
             outFile << "<figure" << id(table) << ">\n";
             writeTable(outFile, table);
             auto title = _titleData.find(table.location);
@@ -500,7 +500,7 @@ void HtmlOutput::writeDocumentParts(std::stringstream& outFile, const std::vecto
                 outFile << "<figcaption>" << title->second.id << ": ";
 
                 if (!isGenerated) {
-                    if (auto caption = boost::get<DocumentPart::Caption>(&*previous)) {
+                    if (auto caption = boost::get<document_part::Caption>(&*previous)) {
                         outFile << "<span " << id(*caption) << ">";
                     }
                 }
