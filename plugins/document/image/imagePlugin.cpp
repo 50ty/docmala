@@ -32,7 +32,7 @@ public:
     BlockProcessing blockProcessing() const override;
     std::vector<Error> process(const ParameterList& parameters, const FileLocation& location, Document& document, const std::string& block) override;
 
-    std::unordered_map<std::string, DocumentPart::Image> _cache;
+    std::unordered_map<std::string, document_part::Image> _cache;
 };
 
 DocumentPlugin::BlockProcessing ImagePlugin::blockProcessing() const {
@@ -95,9 +95,9 @@ std::vector<Error> ImagePlugin::process(const ParameterList& parameters, const F
         }
     }
 
-    DocumentPart::Text text;
+    document_part::Text text;
     text.text.emplace_back(fileName);
-    DocumentPart::Image image(format, fileExtension, imageData, text);
+    document_part::Image image(format, fileExtension, imageData, text);
     _cache.insert(std::make_pair(block, image));
     document.addPart(image);
 

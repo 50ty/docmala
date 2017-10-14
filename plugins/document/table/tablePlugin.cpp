@@ -39,21 +39,21 @@ public:
     std::unique_ptr<MemoryFile> _file;
     std::vector<Error>          _errors;
 
-    void addCell(size_t& currentCol, size_t currentRow, const DocumentPart::Table::Cell& cell, DocumentPart::Table& table);
-    void ensureTableSize(DocumentPart::Table& table, size_t cols, size_t rows);
+    void addCell(size_t& currentCol, size_t currentRow, const document_part::Table::Cell& cell, document_part::Table& table);
+    void ensureTableSize(document_part::Table& table, size_t cols, size_t rows);
 
-    void adjustTableSize(DocumentPart::Table& table);
+    void adjustTableSize(document_part::Table& table);
 };
 
 DocumentPlugin::BlockProcessing TablePlugin::blockProcessing() const {
     return BlockProcessing::Optional;
 }
 
-void TablePlugin::ensureTableSize(DocumentPart::Table& table, size_t cols, size_t rows) {
+void TablePlugin::ensureTableSize(document_part::Table& table, size_t cols, size_t rows) {
     if (table.columns < cols) {
         table.columns = cols;
         for (auto& row : table.cells) {
-            row.resize(table.columns, DocumentPart::Table::Cell());
+            row.resize(table.columns, document_part::Table::Cell());
         }
     }
 
@@ -61,12 +61,12 @@ void TablePlugin::ensureTableSize(DocumentPart::Table& table, size_t cols, size_
         table.rows = rows;
         while (table.cells.size() < table.rows) {
             table.cells.emplace_back();
-            table.cells.back().resize(table.columns, DocumentPart::Table::Cell());
+            table.cells.back().resize(table.columns, document_part::Table::Cell());
         }
     }
 }
 
-void TablePlugin::addCell(size_t& currentCol, const size_t currentRow, const DocumentPart::Table::Cell& cell, DocumentPart::Table& table) {
+void TablePlugin::addCell(size_t& currentCol, const size_t currentRow, const document_part::Table::Cell& cell, document_part::Table& table) {
     ensureTableSize(table, currentCol + cell.columnSpan + 1, currentRow + cell.rowSpan + 1);
 
     if (table.cells[currentRow][currentCol].isHiddenBySpan) {
@@ -98,7 +98,7 @@ void TablePlugin::addCell(size_t& currentCol, const size_t currentRow, const Doc
     currentCol += cell.columnSpan + 1;
 }
 
-void TablePlugin::adjustTableSize(DocumentPart::Table& table) {
+void TablePlugin::adjustTableSize(document_part::Table& table) {
     auto cols = table.cells.back().size();
     // if the current row is longer than the prevously seen ones
     if (table.columns < cols) {
@@ -118,11 +118,11 @@ std::vector<Error> TablePlugin::process(const ParameterList& parameters, const F
     _errors.clear();
     _file = std::make_unique<MemoryFile>(block, location);
 
-    DocumentPart::Table table(location);
+    document_part::Table table(location);
     table.cells.emplace_back();
 
     std::string               spanModifier;
-    DocumentPart::Table::Cell hiddenCellPrototype;
+    document_part::Table::Cell hiddenCellPrototype;
     hiddenCellPrototype.isHiddenBySpan = true;
     size_t currentRow                  = 0;
     size_t currentCol                  = 0;
@@ -140,12 +140,12 @@ std::vector<Error> TablePlugin::process(const ParameterList& parameters, const F
             tableLocation.column -= cellContent.length();
             std::unique_ptr<IFile> file(new MemoryFile(cellContent, tableLocation));
 
-            DocumentPart::Text text;
+            document_part::Text text;
             Docmala::readText(file.get(), _errors, '\0', text);
             //            DocumentPart::FormatedText ft;
             //            ft.text = cellContent;
             //            text.text.push_back(ft);
-            DocumentPart::Table::Cell cell;
+            document_part::Table::Cell cell;
             cell.content.emplace_back(text);
 
             if (!spanModifier.empty()) {

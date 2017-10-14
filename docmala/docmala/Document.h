@@ -6,9 +6,9 @@
         Copyright (C) 2017 Stefan Rommel
 
         This program is free software: you can redistribute it and/or modify
-        it under the terms of the GNU Lesser General Public License as published by
-        the Free Software Foundation, either version 3 of the License, or
-        any later version.
+        it under the terms of the GNU Lesser General Public License as published
+   by the Free Software Foundation, either version 3 of the License, or any
+   later version.
 
         This program is distributed in the hope that it will be useful,
         but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,16 +20,22 @@
  */
 #pragma once
 
-#include <vector>
-#include <map>
 #include "DocumentPart.h"
 #include "MetaData.h"
+#include <boost/hana.hpp>
+#include <map>
+#include <vector>
 
 namespace docmala {
 
+template <typename... TFs>
+auto make_visitor(TFs&&... fs) {
+    return boost::hana::overload(std::forward<decltype(fs)>(fs)...);
+}
+
 class Document {
 public:
-    void addPart(const DocumentPart& part) {
+    void addPart(const document_part::Variant& part) {
         _parts.push_back(part);
         addAnchors(part);
     }
@@ -57,19 +63,27 @@ public:
         return _parts.empty();
     }
 
-    DocumentPart& last() {
+    document_part::Variant& last() {
         return _parts.back();
     }
 
-    std::vector<DocumentPart>& parts() {
+    template< typename T>
+    T* last() {
+        if( _parts.empty() )
+            return nullptr;
+
+        return boost::get<T>(&_parts.back());
+    }
+
+    std::vector<document_part::Variant>& parts() {
         return _parts;
     }
 
-    const std::vector<DocumentPart>& parts() const {
+    const std::vector<document_part::Variant>& parts() const {
         return _parts;
     }
 
-    const std::map<std::string, DocumentPart::Anchor>& anchors() const {
+    const std::map<std::string, document_part::Anchor>& anchors() const {
         return _anchors;
     }
 
@@ -78,30 +92,35 @@ public:
     }
 
 private:
-    void addAnchors(const DocumentPart& part) {
-        if (part.type() == DocumentPart::Type::Anchor) {
-            _anchors.insert(std::make_pair(part.anchor()->name, *part.anchor()));
-        } else if (part.type() == DocumentPart::Type::GeneratedDocument) {
-            for (const auto& p : part.generatedDocument()->document) {
-                addAnchors(p);
-            }
-        } else if (part.type() == DocumentPart::Type::Text) {
-            for (const auto& p : part.text()->text) {
-                addAnchors(p);
-            }
-        } else if (part.type() == DocumentPart::Type::Table) {
-            for (auto row : part.table()->cells) {
-                for (auto cell : row) {
-                    for (const auto& p : cell.content) {
-                        addAnchors(p);
+    void addAnchors(const document_part::Variant& part) {
+        auto visitor = make_visitor(
+            // visitors
+            [this](const document_part::Anchor& anchor) { _anchors.insert(std::make_pair(anchor.name, anchor)); },
+            [this](const document_part::GeneratedDocument& doc) {
+                for (const auto& p : doc.document) {
+                    addAnchors(p);
+                }
+            },
+            [this](const document_part::Text& text) {
+                for (const auto& p : text.text) {
+                    addAnchors(p);
+                }
+            },
+            [this](const document_part::Table& table) {
+                for (const auto& row : table.cells) {
+                    for (const auto& cell : row) {
+                        for (const auto& p : cell.content) {
+                            addAnchors(p);
+                        }
                     }
                 }
-            }
-        }
+            },
+            [](const auto&) {});
+        boost::apply_visitor(visitor, part);
     }
 
-    std::vector<DocumentPart>                   _parts;
-    std::map<std::string, DocumentPart::Anchor> _anchors;
+    std::vector<document_part::Variant>          _parts;
+    std::map<std::string, document_part::Anchor> _anchors;
     std::map<std::string, MetaData>             _metaData;
 };
-}
+} // namespace docmala

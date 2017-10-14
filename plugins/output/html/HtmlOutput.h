@@ -40,29 +40,27 @@ public:
     HtmlDocument produceHtml(const ParameterList& parameters, const Document& document, const std::string& scripts = "");
 
 private:
-    void prepare(const std::vector<DocumentPart>& documentParts);
+    void prepare(const std::vector<document_part::Variant>& documentParts);
 
-    void writeDocumentParts(std::stringstream& outFile, const std::vector<DocumentPart>& documentParts, bool isGenerated = false);
+    void writeDocumentParts(std::stringstream& outFile, const std::vector<document_part::Variant>& documentParts, bool isGenerated = false);
 
-    void writeTable(std::stringstream& outFile, const DocumentPart::Table* table);
-    void writeList(std::stringstream&                         outFile,
-                   std::vector<DocumentPart>::const_iterator& start,
-                   const std::vector<DocumentPart>&           documentParts,
-                   bool                                       isGenerated,
-                   int                                        currentLevel = 0);
+    void writeTable(std::stringstream& outFile, const document_part::Table& table);
+    void writeList(std::stringstream& outFile, const document_part::List& list, bool isGenerated);
+    void writeListEntries(std::stringstream& outFile, const std::vector<document_part::List::Entry>& entries, bool isGenerated);
 
-    unsigned int _imageCounter       = 1;
-    unsigned int _figureCounter      = 1;
-    unsigned int _listingCounter     = 1;
-    unsigned int _tableCounter       = 1;
-    int          _headlineLevels[32] = {0};
+    unsigned int         _imageCounter                       = 1;
+    unsigned int         _figureCounter                      = 1;
+    unsigned int         _listingCounter                     = 1;
+    unsigned int         _tableCounter                       = 1;
+    static constexpr int _maxHeadlineLevels                  = 32;
+    int                  _headlineLevels[_maxHeadlineLevels] = {0};
 
     std::string _nameBase    = "outfile";
     bool        _embedImages = false;
 
     struct TitleData {
         std::string        id;
-        DocumentPart::Text text;
+        document_part::Text text;
     };
 
     std::map<std::string, TitleData>  _anchorData;

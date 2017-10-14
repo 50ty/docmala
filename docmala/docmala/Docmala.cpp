@@ -119,8 +119,8 @@ bool Docmala::parse() {
                 case '\t':
                     continue;
                 case '\n':
-                    if (!_document.parts().empty() && _document.parts().back().type() != DocumentPart::Type::Paragraph) {
-                        _document.addPart(DocumentPart(DocumentPart::Paragraph()));
+                    if (!_document.last<document_part::Paragraph>()) {
+                        _document.addPart(document_part::Paragraph());
                     }
                     continue;
                 case '=':
@@ -137,7 +137,7 @@ bool Docmala::parse() {
                     break;
                 case '[':
                     if (_file->following() == '[') {
-                        DocumentPart::Text text;
+                        document_part::Text text;
                         readText(c, text);
                         _document.addPart(text);
                     } else {
@@ -146,25 +146,25 @@ bool Docmala::parse() {
                     break;
                 case '#':
                     if (isWhitespace(_file->following()) || _file->following() == '#') {
-                        readList(DocumentPart::List::Type::Numbered);
+                        readList(document_part::List::Type::Numbered);
                     } else {
-                        DocumentPart::Text text;
+                        document_part::Text text;
                         readText(c, text);
                         _document.addPart(text);
                     }
                     break;
                 case '*':
                     if (isWhitespace(_file->following()) || _file->following() == '*') {
-                        readList(DocumentPart::List::Type::Points);
+                        readList(document_part::List::Type::Points);
                     } else {
-                        DocumentPart::Text text;
+                        document_part::Text text;
                         readText(c, text);
                         _document.addPart(text);
                     }
                     break;
                 case '<':
                 default: {
-                    DocumentPart::Text text;
+                    document_part::Text text;
                     readText(c, text);
                     _document.addPart(text);
                 }
@@ -199,36 +199,39 @@ void Docmala::doPostprocessing() {
     postProcessPartList(_document.parts());
 }
 
-void Docmala::postProcessPartList(const std::vector<DocumentPart>& parts) {
-    for (auto part : parts) {
-        if (part.type() == DocumentPart::Type::Anchor) {
-            auto prevAnchor = _document.anchors().find(part.anchor()->name);
-            if (prevAnchor != _document.anchors().end() && prevAnchor->second.location != part.anchor()->location) {
+void Docmala::postProcessPartList(const std::vector<document_part::Variant>& parts) {
+    auto visitor = make_visitor(
+        // visitors
+        [this](document_part::Anchor& anchor) {
+            auto prevAnchor = _document.anchors().find(anchor.name);
+            if (prevAnchor != _document.anchors().end() && prevAnchor->second.location != anchor.location) {
                 auto      loc = prevAnchor->second.location;
                 ErrorData additionalInfo{loc,
-                                         std::string("Previous definition of '") + part.anchor()->name + "' is at " + loc.fileName + "("
+                                         std::string("Previous definition of '") + anchor.name + "' is at " + loc.fileName + "("
                                              + std::to_string(loc.line) + ":" + std::to_string(loc.column) + ")"};
-                _errors.push_back(Error{part.anchor()->location,
-                                        std::string("Anchor with name '") + part.anchor()->name + "' already defined.",
-                                        {additionalInfo}});
+                _errors.push_back(
+                    Error{anchor.location, std::string("Anchor with name '") + anchor.name + "' already defined.", {additionalInfo}});
             }
-        } else if (part.text()) {
-            postProcessPartList(part.text()->text);
-        } else if (part.table()) {
-            for (auto row : part.table()->cells) {
+
+        },
+        [this](const document_part::Text& text) { postProcessPartList(text.text); },
+        [this](const document_part::Table& table) {
+            for (auto row : table.cells) {
                 for (auto cell : row) {
                     postProcessPartList(cell.content);
                 }
             }
-        }
+        },
+        [](const auto&) {});
+    for (const auto& part : parts) {
+        boost::apply_visitor(visitor, part);
     }
 }
 
 void Docmala::checkConsistency() {
     for (const auto& part : _document.parts()) {
-        if (part.type() == DocumentPart::Type::Link) {
-            auto link = part.link();
-            if (link->type == DocumentPart::Link::Type::IntraFile) {
+        if (auto link = boost::get<document_part::Link>(&part)) {
+            if (link->type == document_part::Link::Type::IntraFile) {
                 if (_document.anchors().find(link->data) == _document.anchors().end()) {
                     _errors.emplace_back(link->location, "Unable to find anchor for link to: '" + link->data + "'.");
                 }
@@ -253,9 +256,9 @@ bool Docmala::readHeadLine() {
         if (c == '=') {
             level++;
         } else {
-            DocumentPart::Text text;
+            document_part::Text text;
             readText(c, text);
-            _document.addPart(DocumentPart::Headline(text, level));
+            _document.addPart(document_part::Headline(text, level));
             return true;
         }
     }
@@ -265,11 +268,11 @@ bool Docmala::readHeadLine() {
 }
 
 bool Docmala::readCaption() {
-    DocumentPart::Text text;
+    document_part::Text text;
     if (!readText('\0', text)) {
         return false;
     }
-    _document.addPart(DocumentPart::Caption(text));
+    _document.addPart(document_part::Caption(text));
     return true;
 }
 
@@ -385,7 +388,7 @@ bool Docmala::readPlugin() {
     return true;
 }
 
-bool Docmala::readAnchor(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText) {
+bool Docmala::readAnchor(IFile* file, std::vector<Error>& errors, document_part::Text& outText) {
     enum class Mode { Begin, Name, EndTag1, EndTag2 } mode{Mode::Begin};
 
     std::string name;
@@ -429,7 +432,7 @@ bool Docmala::readAnchor(IFile* file, std::vector<Error>& errors, DocumentPart::
                 errors.emplace_back(location, std::string("Error while parsing anchor. Expected ']' but got '") + c + "'.");
                 return false;
             }
-            outText.text.emplace_back(DocumentPart::Anchor{name, anchorLocation});
+            outText.text.emplace_back(document_part::Anchor{name, anchorLocation});
             return true;
 
         } else if (mode == Mode::EndTag2) {
@@ -449,11 +452,11 @@ bool Docmala::readAnchor(IFile* file, std::vector<Error>& errors, DocumentPart::
     return false;
 }
 
-bool Docmala::readLink(DocumentPart::Text& outText) {
+bool Docmala::readLink(document_part::Text& outText) {
     return readLink(_file.get(), _errors, outText);
 }
 
-bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText) {
+bool Docmala::readLink(IFile* file, std::vector<Error>& errors, document_part::Text& outText) {
     enum class Mode { Begin, Data, Text, EndTag1, EndTag2 } mode{Mode::Begin};
 
     std::string text;
@@ -513,12 +516,12 @@ bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Te
                 errors.emplace_back(location, std::string("Error while parsing link. Expected '>' but got '") + c + "'.");
                 return false;
             }
-            auto type = DocumentPart::Link::Type::IntraFile;
+            auto type = document_part::Link::Type::IntraFile;
 
             if (data.find("://") != std::string::npos) {
-                type = DocumentPart::Link::Type::Web;
+                type = document_part::Link::Type::Web;
             } else if (data.find(':') != std::string::npos && data.find('.') != std::string::npos) {
-                type = DocumentPart::Link::Type::InterFile;
+                type = document_part::Link::Type::InterFile;
             }
 
             if (data.empty()) {
@@ -526,7 +529,7 @@ bool Docmala::readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Te
                 return false;
             }
 
-            outText.text.emplace_back(DocumentPart::Link{data, text, type, linkLocation});
+            outText.text.emplace_back(document_part::Link{data, text, type, linkLocation});
             return true;
 
         } else if (mode == Mode::EndTag2) {
@@ -659,219 +662,13 @@ bool isFormatSpecifier(char c) {
     return c == '_' || c == '*' || c == '-' || c == '/' || c == '\'';
 }
 
-// bool Docmala::readText(char startCharacter, DocumentPart::Text &text)
-//{
-//    char c = startCharacter;
-//    DocumentPart::FormatedText formatedText;
-
-//    if( startCharacter == '\0' ) {
-//        c = _file->getch();
-//    }
-
-//    text.line = _file->location().line;
-//    while( true ) {
-//        if( isFormatSpecifier(c) ) {
-//            const char previous = _file->previous();
-//            const char following = _file->following();
-//            if( (isWhitespace(previous, true) || isFormatSpecifier(previous)) && !isWhitespace(following, true) ) {
-//                auto store = formatedText;
-//                bool ok = false;
-//                switch(c) {
-//                case '_':
-//                    ok = !formatedText.bold;
-//                    formatedText.bold = true;
-//                    break;
-//                case '*':
-//                    ok = !formatedText.italic;
-//                    formatedText.italic = true;
-//                    break;
-//                case '-':
-//                    ok = !formatedText.crossedOut;
-//                    formatedText.crossedOut = true;
-//                    break;
-//                }
-//                if( !ok ) {
-//                    formatedText.text.push_back(c);
-//                } else {
-//                    if( !store.text.empty() ) {
-//                        text.text.push_back(store);
-//                        formatedText.text.clear();
-//                    }
-//                }
-//            } else if( (!isWhitespace(previous) ) && ( isWhitespace(following, true) || isFormatSpecifier(following)) ) {
-//                auto store = formatedText;
-//                bool ok = false;
-//                switch(c) {
-//                case '_':
-//                    ok = formatedText.bold;
-//                    formatedText.bold = false;
-//                    break;
-//                case '*':
-//                    ok = formatedText.italic;
-//                    formatedText.italic = false;
-//                    break;
-//                case '-':
-//                    ok = formatedText.crossedOut;
-//                    formatedText.crossedOut = false;
-//                    break;
-//                }
-//                if( !ok ) {
-//                    formatedText.text.push_back(c);
-//                } else {
-//                    if( !store.text.empty() ) {
-//                        text.text.push_back(store);
-//                        formatedText.text.clear();
-//                    }
-//                }
-//            } else {
-//                formatedText.text.push_back(c);
-//            }
-
-//        } else if( c == '\n' ) {
-//            if( !formatedText.text.empty() )
-//                text.text.push_back(formatedText);
-//            bool ok = true;
-//            if( formatedText.bold ) {
-//                _errors.push_back(Error{_file->location(), std::string("Bold formating ('_') was not closed.") });
-//                ok = false;
-//            }
-//            if( formatedText.italic ) {
-//                _errors.push_back(Error{_file->location(), std::string("Italic formating ('*') was not closed.") });
-//                ok = false;
-//            }
-//            if( formatedText.crossedOut ) {
-//                _errors.push_back(Error{_file->location(), std::string("Crossed out formating ('-') was not closed.") });
-//                ok = false;
-//            }
-//            return ok;
-//        } else if( c == '[' && _file->following() == '[' ) {
-//            if( !formatedText.text.empty() )
-//                text.text.push_back(formatedText);
-//            readAnchor();
-//            formatedText.text.clear();
-//        } else if( c == '<' && _file->following() == '<' ) {
-//            if( !formatedText.text.empty() ) {
-//                text.text.push_back(formatedText);
-//            }
-//            readLink();
-//            formatedText.text.clear();
-//        } else {
-//            formatedText.text.push_back(c);
-//        }
-
-//        if( _file->isEoF() )
-//            break;
-
-//        c = _file->getch();
-//    }
-
-//    // end of file is no error, when parsing text
-//    if( !formatedText.text.empty() )
-//        text.text.push_back(formatedText);
-//    return true;
-//}
-
-bool Docmala::readText(char startCharacter, DocumentPart::Text& text) {
+bool Docmala::readText(char startCharacter, document_part::Text& text) {
     return readText(_file.get(), _errors, startCharacter, text);
-    /*    char c = startCharacter;
-        DocumentPart::FormatedText formatedText;
-
-        if( startCharacter == '\0' ) {
-            c = _file->getch();
-        }
-
-        text.line = _file->location().line;
-        while( true ) {
-            if( isFormatSpecifier(c) ) {
-                const char following = _file->following();
-                if( following == c && _file->previous() != '\\') {
-                    c = _file->getch();
-                    auto store = formatedText;
-                    switch(c) {
-                    case '_':
-                        formatedText.underlined = !formatedText.underlined;
-                        break;
-                    case '/':
-                        formatedText.italic = !formatedText.italic;
-                        break;
-                    case '\'':
-                        formatedText.monospaced = !formatedText.monospaced;
-                        break;
-                    case '*':
-                        formatedText.bold = !formatedText.bold;
-                        break;
-                    case '-':
-                        formatedText.stroked = !formatedText.stroked;
-                        break;
-                    }
-                    if( !store.text.empty() ) {
-                        text.text.push_back(store);
-                        formatedText.text.clear();
-                    }
-                } else {
-                    formatedText.text.push_back(c);
-                }
-            } else if( c == '\n' ) {
-                if( !formatedText.text.empty() )
-                    text.text.push_back(formatedText);
-                bool ok = true;
-                if( formatedText.bold ) {
-                    _errors.push_back(Error{_file->location(), std::string("Bold formating (\"**'\") was not closed.") });
-                    ok = false;
-                }
-                if( formatedText.italic ) {
-                    _errors.push_back(Error{_file->location(), std::string("Italic formating (\"//\") was not closed.") });
-                    ok = false;
-                }
-                if( formatedText.monospaced ) {
-                    _errors.push_back(Error{_file->location(), std::string("Monospace formating (\"''\") was not closed.") });
-                    ok = false;
-                }
-                if( formatedText.stroked ) {
-                    _errors.push_back(Error{_file->location(), std::string("Stroked formating (\"--\") was not closed.") });
-                    ok = false;
-                }
-                if( formatedText.underlined ) {
-                    _errors.push_back(Error{_file->location(), std::string("Underlined formating (\"--\") was not closed.") });
-                    ok = false;
-                }
-                return ok;
-            } else if( c == '[' && _file->following() == '[' && _file->previous() != '\\') {
-                if( !formatedText.text.empty() )
-                    text.text.push_back(formatedText);
-                readAnchor();
-                formatedText.text.clear();
-            } else if( c == '<' && _file->following() == '<' && _file->previous() != '\\') {
-                if( !formatedText.text.empty() ) {
-                    text.text.push_back(formatedText);
-                }
-                readLink(text);
-                formatedText.text.clear();
-            } else if( c == '\\' ) {
-                if( _file->following() == '\\' ) {
-                    c = _file->getch();
-                    formatedText.text.push_back(c);
-                }
-            } else {
-                formatedText.text.push_back(c);
-            }
-
-            if( _file->isEoF() )
-                break;
-
-            c = _file->getch();
-        }
-
-        // end of file is no error, when parsing text
-        if( !formatedText.text.empty() )
-            text.text.push_back(formatedText);
-        return true;
-        */
 }
 
-bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharacter, DocumentPart::Text& text) {
-    char                       c = startCharacter;
-    DocumentPart::FormatedText formatedText;
+bool Docmala::readText(IFile* file, std::vector<Error>& errors, char startCharacter, document_part::Text& text) {
+    char                        c = startCharacter;
+    document_part::FormatedText formatedText;
 
     if (startCharacter == '\0') {
         c = file->getch();
@@ -1180,27 +977,30 @@ bool Docmala::readBlock(std::string& block) {
     return false;
 }
 
-bool Docmala::readList(DocumentPart::List::Type type) {
+bool Docmala::readList(document_part::List::Type type) {
     int level = 1;
 
     while (!_file->isEoF()) {
         char c = _file->getch();
 
-        if ((c == '*' && type == DocumentPart::List::Type::Points) || (c == '#' && type == DocumentPart::List::Type::Numbered)) {
+        if ((c == '*' && type == document_part::List::Type::Points) || (c == '#' && type == document_part::List::Type::Numbered)) {
             level++;
         } else if (isWhitespace(c)) {
-            DocumentPart::Text text;
+            document_part::Text text;
             readText('\0', text);
 
-            if (!_document.empty() && _document.last().type() == DocumentPart::Type::List) {
-                if (type == _document.last().list()->type && _document.last().list()->level == level) {
-                    _document.last().list()->entries.push_back(text);
-                } else {
-                    _document.addPart(DocumentPart::List({text}, type, level));
+            if (auto list = _document.last<document_part::List>()) {
+                std::vector<document_part::List::Entry>* entries = &list->entries;
+                for (int i = 1; i < level; i++) {
+                    if (entries->empty()) {
+                        entries->push_back({{}, type, {}});
+                    }
+                    entries = &entries->back().entries;
                 }
+                entries->push_back({text, type, {}});
                 return true;
             }
-            _document.addPart(DocumentPart::List({text}, type, level));
+            _document.addPart(document_part::List(text, type));
             return true;
         }
     }

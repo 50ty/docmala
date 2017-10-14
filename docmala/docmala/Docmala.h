@@ -67,12 +67,12 @@ public:
     }
     void readComment();
 
-    static bool readText(IFile* file, std::vector<Error>& errors, char startCharacter, DocumentPart::Text& text);
+    static bool readText(IFile* file, std::vector<Error>& errors, char startCharacter, document_part::Text& text);
 
 private:
     bool parse();
     void doPostprocessing();
-    void postProcessPartList(const std::vector<DocumentPart>& parts);
+    void postProcessPartList(const std::vector<document_part::Variant>& parts);
     void checkConsistency();
 
     bool readHeadLine();
@@ -80,15 +80,15 @@ private:
     bool readLine(std::string& destination);
     bool readPlugin();
     // bool readAnchor();
-    static bool readAnchor(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText);
-    bool        readLink(DocumentPart::Text& outText);
-    static bool readLink(IFile* file, std::vector<Error>& errors, DocumentPart::Text& outText);
+    static bool readAnchor(IFile* file, std::vector<Error>& errors, document_part::Text& outText);
+    bool        readLink(document_part::Text& outText);
+    static bool readLink(IFile* file, std::vector<Error>& errors, document_part::Text& outText);
     bool        readMetaData();
-    bool        readText(char startCharacter, DocumentPart::Text& text);
+    bool        readText(char startCharacter, document_part::Text& text);
 
     bool readParameterList(ParameterList& parameters, char blockEnd);
     bool readBlock(std::string& block);
-    bool readList(DocumentPart::List::Type type);
+    bool readList(document_part::List::Type type);
 
     static bool isWhitespace(char c, bool allowEndline = false);
 

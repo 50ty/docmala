@@ -15,7 +15,7 @@ Headlines can be created in different levels:
 == Lists
 === Unordered Lists
 
-Unordert lists can be created using the ''*'' sign:
+Unordered lists can be created using the ''*'' sign:
 [code, type=text]
 ----
 * item 1
@@ -37,7 +37,7 @@ produces:
 
 === Ordered Lists
 
-Unordert lists can be created using the ''#'' sign:
+Ordered lists can be created using the ''#'' sign:
 [code, type=text]
 ----
 # item 1
@@ -56,6 +56,46 @@ produces:
 ## item 1.2
 ### item 1.2.1
 # item 2
+
+
+Unordered and ordered lists can be combined:
+[code, type=text]
+----
+# item 1
+** item 1.1
+** item 1.2
+** item 1.3
+# item 2
+** item 2.1
+** item 2.2
+
+* item 1
+## item 1.1
+## item 1.2
+## item 1.3
+* item 2
+## item 2.1
+## item 2.2
+
+----
+
+produces:
+
+# item 1
+** item 1.1
+** item 1.2
+** item 1.3
+# item 2
+** item 2.1
+** item 2.2
+
+* item 1
+## item 1.1
+## item 1.2
+## item 1.3
+* item 2
+## item 2.1
+## item 2.2
 
 
 == Formated Text
